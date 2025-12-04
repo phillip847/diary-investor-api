@@ -1,28 +1,20 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Newsletter = sequelize.define('Newsletter', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
+const newsletterSchema = new mongoose.Schema({
+  name: String,
   email: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: String,
+    required: true,
     unique: true,
-    validate: {
-      isEmail: true,
-    },
+    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
   },
   status: {
-    type: DataTypes.ENUM('active', 'inactive'),
-    defaultValue: 'active',
+    type: String,
+    enum: ['active', 'inactive'],
+    default: 'active',
   },
+}, {
+  timestamps: true,
 });
 
-export default Newsletter;
+export default mongoose.model('Newsletter', newsletterSchema);

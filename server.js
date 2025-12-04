@@ -1,9 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import sequelize from './config/database.js';
-import Article from './models/Article.js';
-import StaticPage from './models/StaticPage.js';
+import connectDB from './config/database.js';
 import articlesRouter from './routes/articles.js';
 import pagesRouter from './routes/pages.js';
 
@@ -26,19 +24,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Initialize database
-const initDB = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Database connected successfully.');
-    
-    await sequelize.sync({ force: false });
-    console.log('Database synced successfully.');
-  } catch (error) {
-    console.error('Unable to connect to database:', error);
-  }
-};
-
-initDB();
+connectDB();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

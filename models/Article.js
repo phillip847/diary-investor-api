@@ -1,52 +1,40 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Article = sequelize.define('Article', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const articleSchema = new mongoose.Schema({
   title: {
-    type: DataTypes.STRING,
-    allowNull: false,
+    type: String,
+    required: true,
   },
-  subtitle: {
-    type: DataTypes.TEXT,
-  },
+  subtitle: String,
   slug: {
-    type: DataTypes.STRING,
+    type: String,
     unique: true,
-    allowNull: false,
+    required: true,
   },
   category: {
-    type: DataTypes.ENUM('Namibia', 'South Africa', 'Global Markets', 'Crypto', 'Investing Guides', 'Housing & Personal Finance', 'Business & Entrepreneurship'),
-    allowNull: false,
+    type: String,
+    enum: ['Namibia', 'South Africa', 'Global Markets', 'Crypto', 'Investing Guides', 'Housing & Personal Finance', 'Business & Entrepreneurship'],
+    required: true,
   },
-  tags: {
-    type: DataTypes.JSON,
-  },
-  thumbnail: {
-    type: DataTypes.STRING,
-  },
-  thumbnailAlt: {
-    type: DataTypes.STRING,
-  },
+  tags: [String],
+  thumbnail: String,
+  thumbnailAlt: String,
   content: {
-    type: DataTypes.TEXT('long'),
-    allowNull: false,
+    type: String,
+    required: true,
   },
   featured: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
+    type: Boolean,
+    default: false,
   },
   status: {
-    type: DataTypes.ENUM('draft', 'published'),
-    defaultValue: 'draft',
+    type: String,
+    enum: ['draft', 'published'],
+    default: 'draft',
   },
-  publishDate: {
-    type: DataTypes.DATE,
-  },
+  publishDate: Date,
+}, {
+  timestamps: true,
 });
 
-export default Article;
+export default mongoose.model('Article', articleSchema);

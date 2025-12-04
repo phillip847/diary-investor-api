@@ -1,21 +1,18 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const StaticPage = sequelize.define('StaticPage', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const staticPageSchema = new mongoose.Schema({
   page: {
-    type: DataTypes.ENUM('about', 'contact', 'newsletter', 'book-session', 'tools'),
+    type: String,
+    enum: ['about', 'contact', 'newsletter', 'book-session', 'tools'],
     unique: true,
-    allowNull: false,
+    required: true,
   },
   content: {
-    type: DataTypes.JSON,
-    allowNull: false,
+    type: mongoose.Schema.Types.Mixed,
+    required: true,
   },
+}, {
+  timestamps: true,
 });
 
-export default StaticPage;
+export default mongoose.model('StaticPage', staticPageSchema);
