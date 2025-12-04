@@ -1,76 +1,4 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import sequelize from '../config/database.js';
-import Newsletter from '../models/Newsletter.js';
-import articlesRouter from '../routes/articles.js';
-import pagesRouter from '../routes/pages.js';
-import newsletterRouter from '../routes/newsletter.js';
-
-dotenv.config();
-
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Routes
-app.use('/api/articles', articlesRouter);
-app.use('/api/pages', pagesRouter);
-app.use('/api/newsletter', newsletterRouter);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    database: process.env.VERCEL ? 'mock' : 'connected'
-  });
-});
-
-// Mock data endpoint for serverless
-if (process.env.VERCEL) {
-  app.get('/api/pages/hero', (req, res) => {
-    res.json({
-      page: 'hero',
-      content: {
-        title: 'Welcome to Diary Investor',
-        subtitle: 'Your investment journey starts here'
-      }
-    });
-  });
-}
-
-// Initialize database
-let dbInitialized = false;
-const initDB = async () => {
-  if (!dbInitialized) {
-    try {
-      // Skip DB connection in serverless if no cloud DB
-      if (process.env.VERCEL && !process.env.DB_HOST?.includes('planetscale')) {
-        console.log('Skipping DB connection in serverless environment');
-        dbInitialized = true;
-        return;
-      }
-      await sequelize.authenticate();
-      await sequelize.sync({ force: false });
-      dbInitialized = true;
-      console.log('Database connected successfully');
-    } catch (error) {
-      console.error('Database connection failed:', error.message);
-      // Don't throw in serverless, just log
-      if (process.env.VERCEL) {
-        console.log('Running in mock mode without database');
-        dbInitialized = true;
-      } else {
-        throw error;
-      }
-    }
-  }
-};
-
-// Serverless handler
+// Serverless handler with mock data
 export default async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -81,12 +9,67 @@ export default async (req, res) => {
     return res.status(200).end();
   }
 
+  const { url, method } = req;
+
   try {
-    // Skip DB init if it's just a health check
-    if (req.url !== '/api/health') {
-      await initDB();
+    // Health check
+    if (url === '/api/health') {
+      return res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        mode: 'serverless'
+      });
     }
-    return app(req, res);
+
+    // Hero section
+    if (url === '/api/pages/hero') {
+      return res.json({
+        page: 'hero',
+        content: {
+          title: 'Welcome to Diary Investor',
+          subtitle: 'Your investment journey starts here'
+        }
+      });
+    }
+
+    // Mock articles
+    if (url.startsWith('/api/articles')) {
+      return res.json({
+        rows: [
+          {
+            id: 1,
+            title: 'Getting Started with Investing',
+            subtitle: 'A beginner\'s guide',
+            category: 'education',
+            status: 'published',
+            featured: true,
+            createdAt: new Date().toISOString()
+          }
+        ],
+        count: 1
+      });
+    }
+
+    // Mock pages
+    if (url.startsWith('/api/pages')) {
+      return res.json({
+        page: 'about',
+        content: {
+          title: 'About Us',
+          description: 'Learn more about Diary Investor'
+        }
+      });
+    }
+
+    // Newsletter endpoint
+    if (url.startsWith('/api/newsletter')) {
+      if (method === 'POST') {
+        return res.status(201).json({ message: 'Subscribed successfully' });
+      }
+      return res.json({ subscribers: 0 });
+    }
+
+    return res.status(404).json({ error: 'Not found' });
   } catch (error) {
     console.error('Handler error:', error);
     return res.status(500).json({ 
