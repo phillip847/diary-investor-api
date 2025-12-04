@@ -43,8 +43,9 @@ const initDB = async () => {
 export default async (req, res) => {
   try {
     await initDB();
+    return app(req, res);
   } catch (error) {
-    console.error('DB init error:', error);
+    console.error('Handler error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-  return app(req, res);
 };
