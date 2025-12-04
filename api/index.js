@@ -2,8 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import sequelize from '../config/database.js';
+import Newsletter from '../models/Newsletter.js';
 import articlesRouter from '../routes/articles.js';
 import pagesRouter from '../routes/pages.js';
+import newsletterRouter from '../routes/newsletter.js';
 
 dotenv.config();
 
@@ -16,19 +18,11 @@ app.use(express.json());
 // Routes
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
+app.use('/api/newsletter', newsletterRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Newsletter endpoint
-app.post('/api/newsletter', (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required' });
-  }
-  res.json({ message: 'Newsletter subscription successful', email });
 });
 
 // Initialize database
