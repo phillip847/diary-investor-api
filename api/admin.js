@@ -1,3 +1,39 @@
+import mongoose from 'mongoose';
+
+// MongoDB connection
+let cachedConnection = null;
+
+async function connectDB() {
+  if (cachedConnection) {
+    return cachedConnection;
+  }
+  
+  try {
+    const connection = await mongoose.connect(process.env.MONGODB_URI);
+    cachedConnection = connection;
+    return connection;
+  } catch (error) {
+    console.error('Database connection error:', error);
+    throw error;
+  }
+}
+
+// Schemas
+const articleSchema = new mongoose.Schema({
+  title: String,
+  status: String,
+  featured: Boolean,
+  createdAt: Date
+});
+
+const newsletterSchema = new mongoose.Schema({
+  email: String,
+  createdAt: Date
+});
+
+const Article = mongoose.models.Article || mongoose.model('Article', articleSchema);
+const Newsletter = mongoose.models.Newsletter || mongoose.model('Newsletter', newsletterSchema);
+
 export default async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', 'https://diaryofan-investor.vercel.app');
@@ -14,18 +50,27 @@ export default async (req, res) => {
   }
 
   try {
-    // Return static stats for fast loading
+    await connectDB();
+    
+    const totalArticles = await Article.countDocuments();
+    const publishedArticles = await Article.countDocuments({ status: 'published' });
+    const featuredArticles = await Article.countDocuments({ featured: true });
+    const totalSubscribers = await Newsletter.countDocuments();
+    
     return res.json({
-      totalArticles: 3,
-      publishedArticles: 3,
-      featuredArticles: 2,
-      totalSubscribers: 0
+      totalArticles,
+      publishedArticles,
+      featuredArticles,
+      totalSubscribers
     });
   } catch (error) {
     console.error('Admin stats error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to fetch stats',
-      message: error.message 
+    // Return fallback data if DB fails
+    return res.json({
+      totalArticles: 0,
+      publishedArticles: 0,
+      featuredArticles: 0,
+      totalSubscribers: 0
     });
   }
 };
