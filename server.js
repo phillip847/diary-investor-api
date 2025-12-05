@@ -5,6 +5,7 @@ import connectDB from './config/database.js';
 import articlesRouter from './routes/articles.js';
 import pagesRouter from './routes/pages.js';
 import authRouter from './routes/auth.js';
+import adminRouter from './routes/admin.js';
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
+app.use('/api/admin', adminRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

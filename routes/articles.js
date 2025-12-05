@@ -1,5 +1,6 @@
 import express from 'express';
 import Article from '../models/Article.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -43,8 +44,8 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create article
-router.post('/', async (req, res) => {
+// Create article (admin only)
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const article = new Article(req.body);
     await article.save();
@@ -54,8 +55,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update article
-router.put('/:id', async (req, res) => {
+// Update article (admin only)
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const article = await Article.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!article) return res.status(404).json({ error: 'Article not found' });
@@ -65,8 +66,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete article
-router.delete('/:id', async (req, res) => {
+// Delete article (admin only)
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const article = await Article.findByIdAndDelete(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
