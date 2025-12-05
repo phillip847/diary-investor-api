@@ -103,6 +103,23 @@ export default async (req, res) => {
       }
     }
 
+    // Admin stats endpoint
+    if (pathname === '/api/admin/stats') {
+      if (method === 'GET') {
+        const totalArticles = await Article.countDocuments();
+        const publishedArticles = await Article.countDocuments({ status: 'published' });
+        const featuredArticles = await Article.countDocuments({ featured: true });
+        const totalSubscribers = await Newsletter.countDocuments();
+        
+        return res.json({
+          totalArticles,
+          publishedArticles,
+          featuredArticles,
+          totalSubscribers
+        });
+      }
+    }
+
     // Articles endpoint
     if (pathname === '/api/articles') {
       if (method === 'GET') {
