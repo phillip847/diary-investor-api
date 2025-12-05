@@ -6,6 +6,7 @@ import articlesRouter from './routes/articles.js';
 import pagesRouter from './routes/pages.js';
 import authRouter from './routes/auth.js';
 import adminRouter from './routes/admin.js';
+import newsletterRouter from './routes/newsletter.js';
 
 dotenv.config();
 
@@ -29,6 +30,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/newsletter', newsletterRouter);
+app.use('/api/newsletter', newsletterRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
