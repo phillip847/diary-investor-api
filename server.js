@@ -14,6 +14,11 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// Root route
+app.get('/', (req, res) => {
+  res.json({ message: 'Diary Investor API', status: 'running' });
+});
+
 // Routes
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
