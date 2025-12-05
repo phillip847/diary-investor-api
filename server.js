@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import articlesRouter from './routes/articles.js';
 import pagesRouter from './routes/pages.js';
+import authRouter from './routes/auth.js';
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.get('/', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
 
