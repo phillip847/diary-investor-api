@@ -6,9 +6,7 @@ const router = express.Router();
 // Get page content
 router.get('/:page', async (req, res) => {
   try {
-    const page = await StaticPage.findOne({
-      where: { page: req.params.page }
-    });
+    const page = await StaticPage.findOne({ page: req.params.page });
     if (!page) return res.status(404).json({ error: 'Page not found' });
     res.json(page);
   } catch (error) {
@@ -19,10 +17,11 @@ router.get('/:page', async (req, res) => {
 // Update page content
 router.put('/:page', async (req, res) => {
   try {
-    const [page, created] = await StaticPage.upsert({
-      page: req.params.page,
-      content: req.body.content
-    });
+    const page = await StaticPage.findOneAndUpdate(
+      { page: req.params.page },
+      { content: req.body.content },
+      { new: true, upsert: true }
+    );
     res.json(page);
   } catch (error) {
     res.status(400).json({ error: error.message });

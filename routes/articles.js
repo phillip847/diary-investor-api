@@ -1,6 +1,5 @@
 import express from 'express';
 import Article from '../models/Article.js';
-import { Op } from 'sequelize';
 
 const router = express.Router();
 
@@ -8,26 +7,26 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { category, status, search, featured, limit = 10, offset = 0 } = req.query;
-    const where = {};
+    const filter = {};
     
-    if (category) where.category = category;
-    if (status) where.status = status;
-    if (featured) where.featured = featured === 'true';
+    if (category) filter.category = category;
+    if (status) filter.status = status;
+    if (featured) filter.featured = featured === 'true';
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { subtitle: { [Op.like]: `%${search}%` } }
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { subtitle: { $regex: search, $options: 'i' } }
       ];
     }
 
-    const articles = await Article.findAndCountAll({
-      where,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['createdAt', 'DESC']],
-    });
+    const articles = await Article.find(filter)
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .sort({ createdAt: -1 });
+    
+    const count = await Article.countDocuments(filter);
 
-    res.json(articles);
+    res.json({ rows: articles, count });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -36,7 +35,7 @@ router.get('/', async (req, res) => {
 // Get single article
 router.get('/:id', async (req, res) => {
   try {
-    const article = await Article.findByPk(req.params.id);
+    const article = await Article.findById(req.params.id);
     if (!article) return res.status(404).json({ error: 'Article not found' });
     res.json(article);
   } catch (error) {
@@ -47,7 +46,8 @@ router.get('/:id', async (req, res) => {
 // Create article
 router.post('/', async (req, res) => {
   try {
-    const article = await Article.create(req.body);
+    const article = new Article(req.body);
+    await article.save();
     res.status(201).json(article);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -57,12 +57,8 @@ router.post('/', async (req, res) => {
 // Update article
 router.put('/:id', async (req, res) => {
   try {
-    const [updated] = await Article.update(req.body, {
-      where: { id: req.params.id }
-    });
-    if (!updated) return res.status(404).json({ error: 'Article not found' });
-    
-    const article = await Article.findByPk(req.params.id);
+    const article = await Article.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!article) return res.status(404).json({ error: 'Article not found' });
     res.json(article);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -72,10 +68,8 @@ router.put('/:id', async (req, res) => {
 // Delete article
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await Article.destroy({
-      where: { id: req.params.id }
-    });
-    if (!deleted) return res.status(404).json({ error: 'Article not found' });
+    const article = await Article.findByIdAndDelete(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: error.message });

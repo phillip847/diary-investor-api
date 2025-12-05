@@ -6,9 +6,7 @@ const router = express.Router();
 // Get all subscribers
 router.get('/', async (req, res) => {
   try {
-    const subscribers = await Newsletter.findAll({
-      order: [['createdAt', 'DESC']],
-    });
+    const subscribers = await Newsletter.find().sort({ createdAt: -1 });
     res.json(subscribers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -23,10 +21,11 @@ router.post('/subscribe', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
     
-    const subscriber = await Newsletter.create({ email, name });
+    const subscriber = new Newsletter({ email, name });
+    await subscriber.save();
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
   } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
+    if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already subscribed' });
     }
     res.status(400).json({ error: error.message });
