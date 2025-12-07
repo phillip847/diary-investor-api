@@ -60,6 +60,7 @@ export default async (req, res) => {
     }
 
     if (req.method === 'GET' && id) {
+      if (!id || id === 'undefined') return res.status(400).json({ error: 'Invalid article ID' });
       const article = await Article.findById(id);
       if (!article) return res.status(404).json({ error: 'Article not found' });
       return res.json(article);
@@ -75,6 +76,7 @@ export default async (req, res) => {
     }
 
     if (req.method === 'PUT' && id) {
+      if (!id || id === 'undefined') return res.status(400).json({ error: 'Invalid article ID' });
       const data = { ...req.body };
       const existing = await Article.findById(id);
       if (data.status === 'published' && existing.status === 'draft' && !data.publishDate) {
@@ -86,6 +88,7 @@ export default async (req, res) => {
     }
 
     if (req.method === 'DELETE' && id) {
+      if (!id || id === 'undefined') return res.status(400).json({ error: 'Invalid article ID' });
       const article = await Article.findByIdAndDelete(id);
       if (!article) return res.status(404).json({ error: 'Article not found' });
       return res.status(204).end();
