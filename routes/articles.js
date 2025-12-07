@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     
     if (category) filter.category = category;
     if (status) filter.status = status;
-    if (featured) filter.featured = featured === 'true';
+    if (featured !== undefined) filter.featured = featured === 'true';
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     const articles = await Article.find(filter)
       .limit(parseInt(limit))
       .skip(parseInt(offset))
-      .sort({ createdAt: -1 });
+      .sort({ publishDate: -1, createdAt: -1 });
     
     const count = await Article.countDocuments(filter);
 
@@ -31,6 +31,30 @@ router.get('/', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Get article by slug
+router.get('/slug/:slug', async (req, res) => {
+  try {
+    const article = await Article.findOne({ slug: req.params.slug });
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.json(article);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get categories list
+router.get('/meta/categories', (req, res) => {
+  res.json([
+    'Namibia',
+    'South Africa',
+    'Global Markets',
+    'Crypto',
+    'Investing Guides',
+    'Housing & Personal Finance',
+    'Business & Entrepreneurship'
+  ]);
 });
 
 // Get single article
@@ -47,7 +71,11 @@ router.get('/:id', async (req, res) => {
 // Create article (admin only)
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const article = new Article(req.body);
+    const articleData = { ...req.body };
+    if (articleData.status === 'published' && !articleData.publishDate) {
+      articleData.publishDate = new Date();
+    }
+    const article = new Article(articleData);
     await article.save();
     res.status(201).json(article);
   } catch (error) {
@@ -58,7 +86,14 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 // Update article (admin only)
 router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const article = await Article.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    const existingArticle = await Article.findById(req.params.id);
+    
+    if (updateData.status === 'published' && existingArticle.status === 'draft' && !updateData.publishDate) {
+      updateData.publishDate = new Date();
+    }
+    
+    const article = await Article.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     if (!article) return res.status(404).json({ error: 'Article not found' });
     res.json(article);
   } catch (error) {

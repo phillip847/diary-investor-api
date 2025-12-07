@@ -37,4 +37,11 @@ const articleSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+articleSchema.pre('save', function(next) {
+  if (!this.slug) {
+    this.slug = this.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+  next();
+});
+
 export default mongoose.model('Article', articleSchema);

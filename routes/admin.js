@@ -12,10 +12,11 @@ router.use(requireAdmin);
 // Dashboard stats
 router.get('/stats', async (req, res) => {
   try {
-    const [totalArticles, publishedArticles, draftArticles, totalUsers] = await Promise.all([
+    const [totalArticles, publishedArticles, draftArticles, featuredArticles, totalUsers] = await Promise.all([
       Article.countDocuments(),
       Article.countDocuments({ status: 'published' }),
       Article.countDocuments({ status: 'draft' }),
+      Article.countDocuments({ featured: true }),
       User.countDocuments()
     ]);
 
@@ -23,8 +24,20 @@ router.get('/stats', async (req, res) => {
       totalArticles,
       publishedArticles,
       draftArticles,
+      featuredArticles,
       totalUsers
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get article preview
+router.get('/articles/:id/preview', async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.json(article);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

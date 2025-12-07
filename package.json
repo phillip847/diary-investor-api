@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "seed:pages": "node seed-static-pages.js",
     "vercel-build": "echo 'Build complete'"
   },
   "dependencies": {
