@@ -28,8 +28,9 @@ const Article = mongoose.models.Article || mongoose.model('Article', articleSche
 
 const authenticate = (req) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
-  if (!token) throw new Error('No token');
+  if (!authHeader) throw new Error('No token');
+  const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+  if (!token || token === 'undefined' || token === 'null') throw new Error('Invalid token');
   return jwt.verify(token, process.env.JWT_SECRET);
 };
 
