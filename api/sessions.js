@@ -47,6 +47,22 @@ export default async (req, res) => {
       return res.json(bookings);
     }
 
+    if (req.method === 'PATCH') {
+      const { id, status } = req.body;
+      if (!id || !status) return res.status(400).json({ error: 'ID and status required' });
+      const booking = await SessionBooking.findByIdAndUpdate(id, { status }, { new: true });
+      if (!booking) return res.status(404).json({ error: 'Booking not found' });
+      return res.json({ message: 'Booking updated', booking });
+    }
+
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ error: 'ID required' });
+      const booking = await SessionBooking.findByIdAndDelete(id);
+      if (!booking) return res.status(404).json({ error: 'Booking not found' });
+      return res.json({ message: 'Booking deleted' });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     return res.status(400).json({ error: error.message });

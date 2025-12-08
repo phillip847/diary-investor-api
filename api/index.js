@@ -128,6 +128,7 @@ export default async (req, res) => {
           const totalSubscribers = await Newsletter.countDocuments();
           const totalBookings = await SessionBooking.countDocuments();
           const pendingBookings = await SessionBooking.countDocuments({ status: 'pending' });
+          const completedBookings = await SessionBooking.countDocuments({ status: 'completed' });
           
           return res.json({
             totalArticles,
@@ -135,7 +136,8 @@ export default async (req, res) => {
             featuredArticles,
             totalSubscribers,
             totalBookings,
-            pendingBookings
+            pendingBookings,
+            completedBookings
           });
         } catch (error) {
           // Return default stats if database fails
@@ -145,7 +147,8 @@ export default async (req, res) => {
             featuredArticles: 2,
             totalSubscribers: 0,
             totalBookings: 0,
-            pendingBookings: 0
+            pendingBookings: 0,
+            completedBookings: 0
           });
         }
       }
