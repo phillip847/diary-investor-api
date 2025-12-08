@@ -11,6 +11,12 @@ const staticPageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.Mixed,
     required: true,
   },
+  contentBlocks: [{
+    id: String,
+    type: String,
+    position: String,
+    content: mongoose.Schema.Types.Mixed
+  }]
 }, {
   timestamps: true,
 });
