@@ -25,7 +25,7 @@ const SessionBooking = mongoose.models.SessionBooking || mongoose.model('Session
 
 export default async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', 'https://diaryofan-investor.vercel.app');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, PATCH, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   
@@ -42,7 +42,7 @@ export default async (req, res) => {
       return res.json(booking);
     }
 
-    if (req.method === 'PATCH') {
+    if (req.method === 'PUT' || req.method === 'PATCH') {
       const booking = await SessionBooking.findByIdAndUpdate(id, req.body, { new: true });
       if (!booking) return res.status(404).json({ error: 'Booking not found' });
       return res.json({ message: 'Booking updated', booking });
