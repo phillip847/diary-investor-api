@@ -31,4 +31,8 @@ const sessionBookingSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+// Performance indexes
+sessionBookingSchema.index({ status: 1 });
+sessionBookingSchema.index({ createdAt: -1 });
+
 export default mongoose.model('SessionBooking', sessionBookingSchema);

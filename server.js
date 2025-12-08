@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import articlesRouter from './routes/articles.js';
@@ -15,11 +16,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+app.use(compression());
 app.use(cors({
   origin: ['https://diaryofan-investor.vercel.app', 'http://localhost:3000'],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Root route
 app.get('/', (req, res) => {

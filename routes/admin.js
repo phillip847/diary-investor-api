@@ -13,24 +13,36 @@ router.use(requireAdmin);
 // Dashboard stats
 router.get('/stats', async (req, res) => {
   try {
-    const [totalArticles, publishedArticles, draftArticles, featuredArticles, totalUsers, totalBookings, pendingBookings] = await Promise.all([
-      Article.countDocuments(),
-      Article.countDocuments({ status: 'published' }),
-      Article.countDocuments({ status: 'draft' }),
-      Article.countDocuments({ featured: true }),
-      User.countDocuments(),
-      SessionBooking.countDocuments(),
-      SessionBooking.countDocuments({ status: 'pending' })
+    const [articleStats, bookingStats, totalUsers] = await Promise.all([
+      Article.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            published: [{ $match: { status: 'published' } }, { $count: 'count' }],
+            draft: [{ $match: { status: 'draft' } }, { $count: 'count' }],
+            featured: [{ $match: { featured: true } }, { $count: 'count' }]
+          }
+        }
+      ]),
+      SessionBooking.aggregate([
+        {
+          $facet: {
+            total: [{ $count: 'count' }],
+            pending: [{ $match: { status: 'pending' } }, { $count: 'count' }]
+          }
+        }
+      ]),
+      User.countDocuments()
     ]);
 
     res.json({
-      totalArticles,
-      publishedArticles,
-      draftArticles,
-      featuredArticles,
+      totalArticles: articleStats[0].total[0]?.count || 0,
+      publishedArticles: articleStats[0].published[0]?.count || 0,
+      draftArticles: articleStats[0].draft[0]?.count || 0,
+      featuredArticles: articleStats[0].featured[0]?.count || 0,
       totalUsers,
-      totalBookings,
-      pendingBookings
+      totalBookings: bookingStats[0].total[0]?.count || 0,
+      pendingBookings: bookingStats[0].pending[0]?.count || 0
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -40,7 +52,7 @@ router.get('/stats', async (req, res) => {
 // Get article preview
 router.get('/articles/:id/preview', async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
+    const article = await Article.findById(req.params.id).lean();
     if (!article) return res.status(404).json({ error: 'Article not found' });
     res.json(article);
   } catch (error) {
@@ -51,7 +63,7 @@ router.get('/articles/:id/preview', async (req, res) => {
 // Get all users
 router.get('/users', async (req, res) => {
   try {
-    const users = await User.find().select('-__v').sort({ createdAt: -1 });
+    const users = await User.find().select('-__v').sort({ createdAt: -1 }).lean();
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });

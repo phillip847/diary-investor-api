@@ -44,4 +44,11 @@ articleSchema.pre('save', function(next) {
   next();
 });
 
+// Performance indexes
+articleSchema.index({ category: 1, status: 1 });
+articleSchema.index({ status: 1, publishDate: -1 });
+articleSchema.index({ featured: 1, status: 1 });
+articleSchema.index({ slug: 1 });
+articleSchema.index({ createdAt: -1 });
+
 export default mongoose.model('Article', articleSchema);

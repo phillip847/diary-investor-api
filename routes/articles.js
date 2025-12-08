@@ -7,7 +7,7 @@ const router = express.Router();
 // Get all articles with filters
 router.get('/', async (req, res) => {
   try {
-    const { category, status, search, featured, limit = 10, offset = 0 } = req.query;
+    const { category, status, search, featured, limit = 50, offset = 0 } = req.query;
     const filter = {};
     
     if (category) filter.category = category;
@@ -20,13 +20,17 @@ router.get('/', async (req, res) => {
       ];
     }
 
-    const articles = await Article.find(filter)
-      .limit(parseInt(limit))
-      .skip(parseInt(offset))
-      .sort({ publishDate: -1, createdAt: -1 });
-    
-    const count = await Article.countDocuments(filter);
+    const [articles, count] = await Promise.all([
+      Article.find(filter)
+        .select('title subtitle slug category tags thumbnail thumbnailAlt featured status publishDate createdAt')
+        .limit(parseInt(limit))
+        .skip(parseInt(offset))
+        .sort({ publishDate: -1, createdAt: -1 })
+        .lean(),
+      Article.countDocuments(filter)
+    ]);
 
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({ rows: articles, count });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -36,8 +40,9 @@ router.get('/', async (req, res) => {
 // Get article by slug
 router.get('/slug/:slug', async (req, res) => {
   try {
-    const article = await Article.findOne({ slug: req.params.slug });
+    const article = await Article.findOne({ slug: req.params.slug }).lean();
     if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.set('Cache-Control', 'public, max-age=300');
     res.json(article);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -46,6 +51,7 @@ router.get('/slug/:slug', async (req, res) => {
 
 // Get categories list
 router.get('/meta/categories', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
   res.json([
     'Namibia',
     'South Africa',
@@ -60,8 +66,9 @@ router.get('/meta/categories', (req, res) => {
 // Get single article
 router.get('/:id', async (req, res) => {
   try {
-    const article = await Article.findById(req.params.id);
+    const article = await Article.findById(req.params.id).lean();
     if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.set('Cache-Control', 'public, max-age=300');
     res.json(article);
   } catch (error) {
     res.status(500).json({ error: error.message });
