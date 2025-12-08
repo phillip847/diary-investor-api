@@ -1,6 +1,7 @@
 import express from 'express';
 import Article from '../models/Article.js';
 import User from '../models/User.js';
+import SessionBooking from '../models/SessionBooking.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -12,12 +13,14 @@ router.use(requireAdmin);
 // Dashboard stats
 router.get('/stats', async (req, res) => {
   try {
-    const [totalArticles, publishedArticles, draftArticles, featuredArticles, totalUsers] = await Promise.all([
+    const [totalArticles, publishedArticles, draftArticles, featuredArticles, totalUsers, totalBookings, pendingBookings] = await Promise.all([
       Article.countDocuments(),
       Article.countDocuments({ status: 'published' }),
       Article.countDocuments({ status: 'draft' }),
       Article.countDocuments({ featured: true }),
-      User.countDocuments()
+      User.countDocuments(),
+      SessionBooking.countDocuments(),
+      SessionBooking.countDocuments({ status: 'pending' })
     ]);
 
     res.json({
@@ -25,7 +28,9 @@ router.get('/stats', async (req, res) => {
       publishedArticles,
       draftArticles,
       featuredArticles,
-      totalUsers
+      totalUsers,
+      totalBookings,
+      pendingBookings
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

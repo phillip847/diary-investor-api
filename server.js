@@ -7,6 +7,7 @@ import pagesRouter from './routes/pages.js';
 import authRouter from './routes/auth.js';
 import adminRouter from './routes/admin.js';
 import newsletterRouter from './routes/newsletter.js';
+import sessionsRouter from './routes/sessions.js';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/api/pages', pagesRouter);
 app.use('/api/admin', adminRouter);
 app.use('/newsletter', newsletterRouter);
 app.use('/api/newsletter', newsletterRouter);
+app.use('/api/sessions', sessionsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
