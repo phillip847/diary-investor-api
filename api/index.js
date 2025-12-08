@@ -50,10 +50,24 @@ const staticPageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const sessionBookingSchema = new mongoose.Schema({
+  fullName: { type: String, required: true },
+  email: { type: String, required: true },
+  phoneNumber: String,
+  sessionType: { type: String, required: true },
+  investmentExperience: String,
+  financialGoals: { type: String, required: true },
+  preferredDate: Date,
+  additionalInformation: String,
+  status: { type: String, default: 'pending' },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const Article = mongoose.models.Article || mongoose.model('Article', articleSchema);
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Newsletter = mongoose.models.Newsletter || mongoose.model('Newsletter', newsletterSchema);
 const StaticPage = mongoose.models.StaticPage || mongoose.model('StaticPage', staticPageSchema);
+const SessionBooking = mongoose.models.SessionBooking || mongoose.model('SessionBooking', sessionBookingSchema);
 
 export default async (req, res) => {
   // Set CORS headers
@@ -112,12 +126,16 @@ export default async (req, res) => {
           const publishedArticles = await Article.countDocuments({ status: 'published' });
           const featuredArticles = await Article.countDocuments({ featured: true });
           const totalSubscribers = await Newsletter.countDocuments();
+          const totalBookings = await SessionBooking.countDocuments();
+          const pendingBookings = await SessionBooking.countDocuments({ status: 'pending' });
           
           return res.json({
             totalArticles,
             publishedArticles,
             featuredArticles,
-            totalSubscribers
+            totalSubscribers,
+            totalBookings,
+            pendingBookings
           });
         } catch (error) {
           // Return default stats if database fails
@@ -125,7 +143,9 @@ export default async (req, res) => {
             totalArticles: 2,
             publishedArticles: 2,
             featuredArticles: 2,
-            totalSubscribers: 0
+            totalSubscribers: 0,
+            totalBookings: 0,
+            pendingBookings: 0
           });
         }
       }
