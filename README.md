@@ -71,3 +71,12 @@ npm run dev
 
 ### Auth
 - `POST /api/auth` - Get JWT token
+
+### Newsletter
+- `POST /api/newsletter/subscribe` - Subscribe to newsletter
+- `POST /api/newsletter/upload` - Upload newsletter PDF (admin)
+- `GET /api/newsletter/list` - List all newsletters
+- `GET /api/newsletter/:id` - Get newsletter by ID
+- `DELETE /api/newsletter/:id` - Delete newsletter (admin)
+- `POST /api/newsletter/:id/send` - Send to subscribers (admin)
+- `GET /api/newsletter` - Get all subscribers (admin)
