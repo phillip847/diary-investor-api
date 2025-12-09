@@ -1,0 +1,227 @@
+{
+  "info": {
+    "name": "Diary Investor - Newsletter API",
+    "description": "Complete API collection for newsletter management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get JWT Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token', response.token);",
+                  "    console.log('Token saved:', response.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"your-password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Newsletter - Public",
+      "item": [
+        {
+          "name": "Subscribe to Newsletter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/subscribe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", "subscribe"]
+            }
+          }
+        },
+        {
+          "name": "List All Newsletters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", "list"]
+            }
+          }
+        },
+        {
+          "name": "Get Single Newsletter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "NEWSLETTER_ID_HERE"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Newsletter - Admin",
+      "item": [
+        {
+          "name": "Upload Newsletter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "title",
+                  "value": "January 2024 Newsletter",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Monthly market insights and investment tips",
+                  "type": "text"
+                },
+                {
+                  "key": "issueDate",
+                  "value": "2024-01-15",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Send Newsletter to Subscribers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/:id/send",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", ":id", "send"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "NEWSLETTER_ID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Newsletter",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "NEWSLETTER_ID_HERE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get All Subscribers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/newsletter",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "newsletter"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
