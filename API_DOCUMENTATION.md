@@ -156,3 +156,47 @@ Returns:
 ### Static Page
 - `page`: Required, must be one of: about, contact, newsletter, book-session, tools
 - `content`: Required (flexible schema)
+
+## Newsletter Management
+
+### 1. Subscribe to Newsletter
+**POST** `/api/newsletter/subscribe`
+```json
+{
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+### 2. Upload Newsletter (Admin)
+**POST** `/api/newsletter/upload`
+- Requires authentication
+- Content-Type: multipart/form-data
+- Fields:
+  - `file`: PDF file (required, max 10MB)
+  - `title`: Newsletter title (required)
+  - `description`: Newsletter description (optional)
+  - `issueDate`: Publication date (optional, defaults to now)
+
+### 3. List All Newsletters
+**GET** `/api/newsletter/list`
+
+Returns published newsletters sorted by issue date (newest first).
+
+### 4. Get Single Newsletter
+**GET** `/api/newsletter/:id`
+
+Returns newsletter with file data.
+
+### 5. Delete Newsletter (Admin)
+**DELETE** `/api/newsletter/:id`
+- Requires authentication
+
+### 6. Send Newsletter to Subscribers (Admin)
+**POST** `/api/newsletter/:id/send`
+- Requires authentication
+- Sends email notification to all active subscribers
+
+### 7. Get All Subscribers (Admin)
+**GET** `/api/newsletter`
+- Returns all newsletter subscribers

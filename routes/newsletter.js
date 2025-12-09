@@ -1,12 +1,28 @@
 import express from 'express';
-import Newsletter from '../models/Newsletter.js';
+import multer from 'multer';
+import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
+import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  }
+});
 
 // Get all subscribers
 router.get('/', async (req, res) => {
   try {
-    const subscribers = await Newsletter.find().sort({ createdAt: -1 });
+    const subscribers = await Subscriber.find().sort({ createdAt: -1 });
     res.json(subscribers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -21,7 +37,7 @@ router.post('/subscribe', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
     
-    const subscriber = new Newsletter({ email, name });
+    const subscriber = new Subscriber({ email, name });
     await subscriber.save();
     
     // Send welcome email
@@ -38,6 +54,100 @@ router.post('/subscribe', async (req, res) => {
       return res.status(400).json({ error: 'Email already subscribed' });
     }
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Upload newsletter (admin only)
+router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
+  try {
+    const { title, description, issueDate } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'PDF file is required' });
+    }
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Convert file to base64 for storage
+    const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    
+    const newsletter = new NewsletterIssue({
+      title,
+      description,
+      fileUrl,
+      fileName: req.file.originalname,
+      fileSize: req.file.size,
+      issueDate: issueDate || Date.now(),
+    });
+    
+    await newsletter.save();
+    res.status(201).json({ message: 'Newsletter uploaded successfully', newsletter });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all newsletters
+router.get('/list', async (req, res) => {
+  try {
+    const newsletters = await NewsletterIssue.find({ status: 'published' })
+      .sort({ issueDate: -1 })
+      .select('-fileUrl'); // Exclude large file data from list
+    res.json(newsletters);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single newsletter with file
+router.get('/:id', async (req, res) => {
+  try {
+    const newsletter = await NewsletterIssue.findById(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({ error: 'Newsletter not found' });
+    }
+    res.json(newsletter);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete newsletter (admin only)
+router.delete('/:id', verifyToken, async (req, res) => {
+  try {
+    const newsletter = await NewsletterIssue.findByIdAndDelete(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({ error: 'Newsletter not found' });
+    }
+    res.json({ message: 'Newsletter deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Send newsletter to all subscribers (admin only)
+router.post('/:id/send', verifyToken, async (req, res) => {
+  try {
+    const newsletter = await NewsletterIssue.findById(req.params.id);
+    if (!newsletter) {
+      return res.status(404).json({ error: 'Newsletter not found' });
+    }
+
+    const subscribers = await Subscriber.find({ status: 'active' });
+    if (subscribers.length === 0) {
+      return res.status(400).json({ error: 'No active subscribers found' });
+    }
+
+    const newsletterUrl = `${process.env.FRONTEND_URL || 'https://diaryofan-investor.vercel.app'}/newsletter/${newsletter._id}`;
+    
+    const { sendNewsletterToSubscribers } = await import('../utils/email.js');
+    await sendNewsletterToSubscribers(subscribers, newsletter.title, newsletterUrl);
+    
+    res.json({ message: `Newsletter sent to ${subscribers.length} subscribers` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const newsletterSchema = new mongoose.Schema({
+const subscriberSchema = new mongoose.Schema({
   name: String,
   email: {
     type: String,
@@ -17,4 +17,31 @@ const newsletterSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-export default mongoose.model('Newsletter', newsletterSchema);
+const newsletterIssueSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: String,
+  fileUrl: {
+    type: String,
+    required: true,
+  },
+  fileName: String,
+  fileSize: Number,
+  issueDate: {
+    type: Date,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'published'],
+    default: 'published',
+  },
+}, {
+  timestamps: true,
+});
+
+export const Subscriber = mongoose.model('Subscriber', subscriberSchema);
+export const NewsletterIssue = mongoose.model('NewsletterIssue', newsletterIssueSchema);
+export default Subscriber;

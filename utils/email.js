@@ -31,3 +31,14 @@ export const sendContactEmail = async ({ name, email, message }) => {
     html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Message:</strong></p><p>${message}</p>`,
   });
 };
+
+export const sendNewsletterToSubscribers = async (subscribers, newsletterTitle, newsletterUrl) => {
+  const emails = subscribers.map(sub => sub.email);
+  
+  return await sendEmail({
+    to: emails,
+    subject: `New Newsletter: ${newsletterTitle}`,
+    text: `A new newsletter "${newsletterTitle}" is now available. View it at: ${newsletterUrl}`,
+    html: `<h2>New Newsletter Available</h2><p><strong>${newsletterTitle}</strong></p><p><a href="${newsletterUrl}">Read Newsletter</a></p>`,
+  });
+};
