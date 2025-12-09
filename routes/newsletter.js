@@ -23,6 +23,15 @@ router.post('/subscribe', async (req, res) => {
     
     const subscriber = new Newsletter({ email, name });
     await subscriber.save();
+    
+    // Send welcome email
+    try {
+      const { sendWelcomeEmail } = await import('../utils/email.js');
+      await sendWelcomeEmail(email, name);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
+    
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
   } catch (error) {
     if (error.code === 11000) {
