@@ -66,6 +66,7 @@ const sessionBookingSchema = new mongoose.Schema({
 const Article = mongoose.models.Article || mongoose.model('Article', articleSchema);
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Newsletter = mongoose.models.Newsletter || mongoose.model('Newsletter', newsletterSchema);
+const Subscriber = mongoose.models.Subscriber || mongoose.model('Subscriber', newsletterSchema);
 const StaticPage = mongoose.models.StaticPage || mongoose.model('StaticPage', staticPageSchema);
 const SessionBooking = mongoose.models.SessionBooking || mongoose.model('SessionBooking', sessionBookingSchema);
 
@@ -232,10 +233,17 @@ export default async (req, res) => {
     }
 
     // Newsletter endpoints
-    if (pathname === '/newsletter/subscribers') {
+    if (pathname === '/api/newsletter' || pathname === '/newsletter') {
       if (method === 'GET') {
         const subscribers = await Newsletter.find().sort({ createdAt: -1 });
         return res.json(subscribers);
+      }
+    }
+
+    if (pathname === '/api/newsletter/list') {
+      if (method === 'GET') {
+        // Return empty array for now since we don't have newsletter issues in old schema
+        return res.json([]);
       }
     }
 
@@ -249,6 +257,10 @@ export default async (req, res) => {
         try {
           const subscriber = new Newsletter({ email, name });
           await subscriber.save();
+          
+          // Send welcome email (simplified for Vercel)
+          console.log(`Welcome email would be sent to: ${email}`);
+          
           return res.status(201).json({ 
             message: 'Newsletter subscription successful', 
             subscriber 
