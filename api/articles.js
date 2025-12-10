@@ -1,5 +1,5 @@
 import connectDB from '../config/database.js';
-import { Article } from '../models/Article.js';
+import Article from '../models/Article.js';
 
 export default async function handler(req, res) {
   // CORS headers
