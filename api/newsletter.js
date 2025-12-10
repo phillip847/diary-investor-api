@@ -45,12 +45,15 @@ export default async function handler(req, res) {
   // Handle /api/newsletter?action=upload
   if (action === 'upload' && req.method === 'POST') {
     try {
+      console.log('Upload request received');
       const authHeader = req.headers['authorization'];
       const token = authHeader && authHeader.split(' ')[1];
       if (!token) return res.status(401).json({ error: 'Access token required' });
       jwt.verify(token, process.env.JWT_SECRET);
 
       const { title, description, issueDate, fileUrl, fileName, fileSize } = req.body;
+      console.log('Upload data:', { title, description, fileName, fileSize });
+      
       if (!title || !fileUrl) {
         return res.status(400).json({ error: 'Title and file are required' });
       }
@@ -62,8 +65,10 @@ export default async function handler(req, res) {
       });
       
       await newsletter.save();
+      console.log('Newsletter saved successfully:', newsletter._id);
       return res.status(201).json({ message: 'Newsletter uploaded successfully', newsletter });
     } catch (error) {
+      console.error('Upload error:', error);
       if (error.name === 'JsonWebTokenError') {
         return res.status(401).json({ error: 'Invalid token' });
       }
