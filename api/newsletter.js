@@ -121,26 +121,54 @@ export default async function handler(req, res) {
   }
 
   // Handle /api/newsletter?action=subscribers
-  if (action === 'subscribers' && req.method === 'GET') {
-    try {
-      const subscribers = await Subscriber.find().sort({ createdAt: -1 });
-      return res.json(subscribers);
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+  if (action === 'subscribers') {
+    if (req.method === 'GET') {
+      try {
+        const subscribers = await Subscriber.find().sort({ createdAt: -1 });
+        return res.json(subscribers);
+      } catch (error) {
+        return res.status(500).json({ error: error.message });
+      }
+    }
+    
+    if (req.method === 'DELETE' && id) {
+      try {
+        console.log('Attempting to delete subscriber with ID:', id);
+        const subscriber = await Subscriber.findByIdAndDelete(id);
+        if (!subscriber) {
+          console.log('Subscriber not found for deletion:', id);
+          return res.status(404).json({ error: 'Subscriber not found' });
+        }
+        console.log('Subscriber deleted successfully:', id);
+        return res.json({ message: 'Subscriber deleted successfully' });
+      } catch (error) {
+        console.error('Subscriber delete error:', error);
+        return res.status(500).json({ error: error.message });
+      }
     }
   }
 
   // Handle DELETE first
   if (req.method === 'DELETE' && id) {
     try {
-      console.log('Attempting to delete newsletter with ID:', id);
-      const newsletter = await NewsletterIssue.findByIdAndDelete(id);
-      if (!newsletter) {
-        console.log('Newsletter not found for deletion:', id);
-        return res.status(404).json({ error: 'Newsletter not found' });
+      console.log('Attempting to delete with ID:', id);
+      
+      // Try deleting newsletter first
+      let newsletter = await NewsletterIssue.findByIdAndDelete(id);
+      if (newsletter) {
+        console.log('Newsletter deleted successfully:', id);
+        return res.json({ message: 'Newsletter deleted successfully' });
       }
-      console.log('Newsletter deleted successfully:', id);
-      return res.json({ message: 'Newsletter deleted successfully' });
+      
+      // If not newsletter, try deleting subscriber
+      let subscriber = await Subscriber.findByIdAndDelete(id);
+      if (subscriber) {
+        console.log('Subscriber deleted successfully:', id);
+        return res.json({ message: 'Subscriber deleted successfully' });
+      }
+      
+      console.log('Neither newsletter nor subscriber found for deletion:', id);
+      return res.status(404).json({ error: 'Item not found' });
     } catch (error) {
       console.error('Delete error:', error);
       return res.status(500).json({ error: error.message });
