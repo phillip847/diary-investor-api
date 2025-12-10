@@ -2,8 +2,6 @@ import connectDB from '../../config/database.js';
 import { Subscriber } from '../../models/Newsletter.js';
 import sgMail from '@sendgrid/mail';
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -29,20 +27,33 @@ export default async function handler(req, res) {
     await subscriber.save();
     
     // Send welcome email
-    try {
-      await sgMail.send({
-        to: email,
-        from: process.env.SENDGRID_FROM_EMAIL,
-        subject: 'Welcome to Diary of an Investor Newsletter!',
-        html: `
-          <h2>Welcome ${name || 'there'}!</h2>
-          <p>Thank you for subscribing to the Diary of an Investor newsletter.</p>
-          <p>You'll receive our latest insights on investing, market analysis, and financial tips directly in your inbox.</p>
-          <p>Best regards,<br>The Diary of an Investor Team</p>
-        `
-      });
-    } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+    if (process.env.SENDGRID_API_KEY) {
+      try {
+        sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+        
+        const msg = {
+          to: email,
+          from: {
+            email: process.env.SENDGRID_FROM_EMAIL,
+            name: 'Diary of an Investor'
+          },
+          subject: 'Welcome to Diary of an Investor Newsletter!',
+          text: `Welcome ${name || 'there'}! Thank you for subscribing to the Diary of an Investor newsletter.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #333;">Welcome ${name || 'there'}!</h2>
+              <p>Thank you for subscribing to the Diary of an Investor newsletter.</p>
+              <p>You'll receive our latest insights on investing, market analysis, and financial tips directly in your inbox.</p>
+              <p>Best regards,<br><strong>The Diary of an Investor Team</strong></p>
+            </div>
+          `
+        };
+        
+        await sgMail.send(msg);
+        console.log('Welcome email sent successfully to:', email);
+      } catch (emailError) {
+        console.error('SendGrid error:', emailError.response?.body || emailError.message);
+      }
     }
     
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
