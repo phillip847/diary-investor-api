@@ -1,7 +1,6 @@
 import connectDB from '../../../config/database.js';
 import { Subscriber } from '../../../models/Newsletter.js';
 import jwt from 'jsonwebtoken';
-import User from '../../../models/User.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,12 +23,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Access token required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
-    
-    if (!user || user.role !== 'admin') {
-      return res.status(401).json({ error: 'Admin access required' });
-    }
+    jwt.verify(token, process.env.JWT_SECRET);
 
     await connectDB();
     
@@ -42,6 +36,9 @@ export default async function handler(req, res) {
     
     res.json({ message: 'Subscriber deleted successfully' });
   } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
     res.status(500).json({ error: error.message });
   }
 }
