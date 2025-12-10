@@ -111,11 +111,17 @@ export default async function handler(req, res) {
   // Handle /api/newsletter?action=list
   if (action === 'list' && req.method === 'GET') {
     try {
+      console.log('Handling list action...');
+      const allNewsletters = await NewsletterIssue.find({});
+      console.log('All newsletters in DB:', allNewsletters.length);
+      
       const newsletters = await NewsletterIssue.find({ status: 'published' })
         .sort({ issueDate: -1 })
         .select('-fileUrl');
+      console.log('Published newsletters:', newsletters.length);
       return res.json(newsletters);
     } catch (error) {
+      console.error('List action error:', error);
       return res.status(500).json({ error: error.message });
     }
   }
