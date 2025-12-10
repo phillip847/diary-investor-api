@@ -1,5 +1,5 @@
 import connectDB from '../../config/database.js';
-import { NewsletterIssue } from '../../models/Newsletter.js';
+import { Subscriber } from '../../models/Newsletter.js';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
@@ -27,25 +27,23 @@ export default async function handler(req, res) {
 
     await connectDB();
     
-    const { title, description, issueDate, fileUrl, fileName, fileSize } = req.body;
+    const { title, newsletterId } = req.body;
     
-    if (!title || !fileUrl) {
-      return res.status(400).json({ error: 'Title and file are required' });
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
     }
 
-    const newsletter = new NewsletterIssue({
-      title,
-      description,
-      fileUrl,
-      fileName,
-      fileSize,
-      issueDate: issueDate || Date.now(),
-      status: 'published'
-    });
+    const subscribers = await Subscriber.find({ status: 'active' });
+    if (subscribers.length === 0) {
+      return res.status(400).json({ error: 'No active subscribers found' });
+    }
+
+    const newsletterUrl = `${process.env.FRONTEND_URL || 'https://diaryofan-investor.vercel.app'}/newsletter/${newsletterId}`;
     
-    await newsletter.save();
+    const { sendNewsletterToSubscribers } = await import('../../utils/email.js');
+    await sendNewsletterToSubscribers(subscribers, title, newsletterUrl);
     
-    res.status(201).json({ message: 'Newsletter uploaded successfully', newsletter });
+    res.json({ message: `Newsletter notification sent to ${subscribers.length} subscribers` });
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ error: 'Invalid token' });
