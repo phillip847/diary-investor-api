@@ -15,6 +15,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('Newsletter subscription request:', req.body);
+  console.log('SendGrid API Key exists:', !!process.env.SENDGRID_API_KEY);
+  console.log('SendGrid From Email:', process.env.SENDGRID_FROM_EMAIL);
+
   try {
     await connectDB();
     
@@ -23,20 +27,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Email is required' });
     }
     
+    console.log('Saving subscriber to database...');
     const subscriber = new Subscriber({ email, name });
     await subscriber.save();
+    console.log('Subscriber saved successfully');
     
     // Send welcome email
     if (process.env.SENDGRID_API_KEY) {
+      console.log('Attempting to send welcome email...');
       try {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY);
         
         const msg = {
           to: email,
-          from: {
-            email: process.env.SENDGRID_FROM_EMAIL,
-            name: 'Diary of an Investor'
-          },
+          from: process.env.SENDGRID_FROM_EMAIL,
           subject: 'Welcome to Diary of an Investor Newsletter!',
           text: `Welcome ${name || 'there'}! Thank you for subscribing to the Diary of an Investor newsletter.`,
           html: `
@@ -49,15 +53,25 @@ export default async function handler(req, res) {
           `
         };
         
-        await sgMail.send(msg);
+        console.log('Sending email with message:', JSON.stringify(msg, null, 2));
+        const result = await sgMail.send(msg);
+        console.log('SendGrid response:', result);
         console.log('Welcome email sent successfully to:', email);
       } catch (emailError) {
-        console.error('SendGrid error:', emailError.response?.body || emailError.message);
+        console.error('SendGrid error details:', {
+          message: emailError.message,
+          code: emailError.code,
+          response: emailError.response?.body,
+          statusCode: emailError.response?.statusCode
+        });
       }
+    } else {
+      console.log('No SendGrid API key found, skipping email');
     }
     
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
   } catch (error) {
+    console.error('Subscription error:', error);
     if (error.code === 11000) {
       return res.status(400).json({ error: 'Email already subscribed' });
     }
