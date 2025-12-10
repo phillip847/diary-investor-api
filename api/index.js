@@ -72,7 +72,7 @@ const SessionBooking = mongoose.models.SessionBooking || mongoose.model('Session
 
 export default async (req, res) => {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'https://diaryofan-investor.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -229,6 +229,30 @@ export default async (req, res) => {
           });
         }
         return res.json(pageData);
+      }
+    }
+
+    // Admin articles endpoint
+    if (pathname === '/api/admin/articles') {
+      if (method === 'GET') {
+        const articles = await Article.find().sort({ createdAt: -1 });
+        return res.json(articles);
+      }
+    }
+
+    // Sessions endpoint
+    if (pathname === '/api/sessions') {
+      if (method === 'GET') {
+        const sessions = await SessionBooking.find().sort({ createdAt: -1 });
+        return res.json(sessions);
+      }
+    }
+
+    // Newsletter subscribers endpoint
+    if (pathname === '/api/newsletter/subscribers') {
+      if (method === 'GET') {
+        const subscribers = await Newsletter.find().sort({ createdAt: -1 });
+        return res.json(subscribers);
       }
     }
 

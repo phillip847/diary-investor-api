@@ -9,7 +9,15 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    return res.json([]);
+    return res.json({
+      totalArticles: 2,
+      publishedArticles: 2,
+      featuredArticles: 2,
+      totalSubscribers: 0,
+      totalBookings: 0,
+      pendingBookings: 0,
+      completedBookings: 0
+    });
   }
   
   return res.status(405).json({ error: 'Method not allowed' });
