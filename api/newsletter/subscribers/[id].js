@@ -1,6 +1,7 @@
 import connectDB from '../../../config/database.js';
 import { Subscriber } from '../../../models/Newsletter.js';
-import { verifyToken } from '../../../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import User from '../../../models/User.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,9 +17,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const authResult = verifyToken(req);
-    if (!authResult.success) {
-      return res.status(401).json({ error: authResult.error });
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    
+    if (!user || user.role !== 'admin') {
+      return res.status(401).json({ error: 'Admin access required' });
     }
 
     await connectDB();
