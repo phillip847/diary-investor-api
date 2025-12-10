@@ -79,19 +79,27 @@ export default async function handler(req, res) {
       jwt.verify(token, process.env.JWT_SECRET);
 
       const { title, newsletterId } = req.body;
+      console.log('Newsletter notification request:', { title, newsletterId });
+      
       if (!title) return res.status(400).json({ error: 'Title is required' });
 
       const subscribers = await Subscriber.find({ status: 'active' });
+      console.log(`Found ${subscribers.length} active subscribers`);
+      
       if (subscribers.length === 0) {
         return res.status(400).json({ error: 'No active subscribers found' });
       }
 
       const newsletterUrl = `${process.env.FRONTEND_URL || 'https://diaryofan-investor.vercel.app'}/newsletter/${newsletterId}`;
+      console.log('Sending newsletter to URL:', newsletterUrl);
+      
       const { sendNewsletterToSubscribers } = await import('../utils/email.js');
       await sendNewsletterToSubscribers(subscribers, title, newsletterUrl);
       
+      console.log(`Newsletter notification sent successfully to ${subscribers.length} subscribers`);
       return res.json({ message: `Newsletter notification sent to ${subscribers.length} subscribers` });
     } catch (error) {
+      console.error('Newsletter notification error:', error);
       if (error.name === 'JsonWebTokenError') {
         return res.status(401).json({ error: 'Invalid token' });
       }
