@@ -53,20 +53,12 @@ export default async function handler(req, res) {
           `
         };
         
-        console.log('Sending email with message:', JSON.stringify(msg, null, 2));
-        const result = await sgMail.send(msg);
-        console.log('SendGrid response:', result);
-        console.log('Welcome email sent successfully to:', email);
+        console.log('Sending email to:', email);
+        await sgMail.send(msg);
+        console.log('Welcome email sent successfully!');
       } catch (emailError) {
-        console.error('SendGrid error details:', {
-          message: emailError.message,
-          code: emailError.code,
-          response: emailError.response?.body,
-          statusCode: emailError.response?.statusCode
-        });
+        console.error('SendGrid error:', emailError.message);
       }
-    } else {
-      console.log('No SendGrid API key found, skipping email');
     }
     
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
