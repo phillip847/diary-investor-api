@@ -7,7 +7,17 @@ import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { sendNewsletterEmail } from '../utils/email.js';
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -115,11 +125,14 @@ router.post('/newsletter', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'PDF file is required' });
     }
 
+    // Convert file to base64 for MongoDB storage
+    const fileUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+
     const newsletter = new NewsletterIssue({
       title,
       message,
-      description: message, // Keep both for compatibility
-      fileUrl: `/uploads/${file.filename}`,
+      description: message,
+      fileUrl,
       fileName: file.originalname,
       fileSize: file.size
     });
@@ -147,7 +160,9 @@ router.put('/newsletter/:id', upload.single('pdf'), async (req, res) => {
     const updateData = { title, message, description: message };
     
     if (req.file) {
-      updateData.fileUrl = `/uploads/${req.file.filename}`;
+      // Convert new file to base64
+      const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      updateData.fileUrl = fileUrl;
       updateData.fileName = req.file.originalname;
       updateData.fileSize = req.file.size;
     }
