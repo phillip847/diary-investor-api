@@ -1,5 +1,8 @@
 import connectDB from '../../config/database.js';
 import { Subscriber } from '../../models/Newsletter.js';
+import sgMail from '@sendgrid/mail';
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -24,6 +27,23 @@ export default async function handler(req, res) {
     
     const subscriber = new Subscriber({ email, name });
     await subscriber.save();
+    
+    // Send welcome email
+    try {
+      await sgMail.send({
+        to: email,
+        from: process.env.SENDGRID_FROM_EMAIL,
+        subject: 'Welcome to Diary of an Investor Newsletter!',
+        html: `
+          <h2>Welcome ${name || 'there'}!</h2>
+          <p>Thank you for subscribing to the Diary of an Investor newsletter.</p>
+          <p>You'll receive our latest insights on investing, market analysis, and financial tips directly in your inbox.</p>
+          <p>Best regards,<br>The Diary of an Investor Team</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
     
     res.status(201).json({ message: 'Newsletter subscription successful', subscriber });
   } catch (error) {
