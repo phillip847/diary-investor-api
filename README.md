@@ -1,7 +1,6 @@
 # diary-investor-api
 
 Content Management System API for Diary of an Investor
-
 ## Features
 
 ### Article Management
