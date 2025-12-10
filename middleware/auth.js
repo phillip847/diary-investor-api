@@ -30,3 +30,6 @@ export const requireAdmin = (req, res, next) => {
   }
   next();
 };
+
+// Alias for compatibility
+export const verifyToken = authenticateToken;
