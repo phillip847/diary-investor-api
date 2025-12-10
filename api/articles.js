@@ -12,7 +12,29 @@ export default async function handler(req, res) {
   }
 
   await connectDB();
+  const { id, slug, meta } = req.query;
 
+  // Handle /api/articles/meta/categories
+  if (meta === 'categories') {
+    const categories = ['Namibia', 'South Africa', 'Global Markets', 'Crypto', 'Investing Guides', 'Housing & Personal Finance', 'Business & Entrepreneurship'];
+    return res.json({ categories });
+  }
+
+  // Handle /api/articles/[id] or /api/articles/slug/[slug]
+  if (id || slug) {
+    try {
+      const query = id ? { _id: id } : { slug, status: 'published' };
+      const article = await Article.findOne(query);
+      if (!article) {
+        return res.status(404).json({ error: 'Article not found' });
+      }
+      return res.json(article);
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  // Handle /api/articles (list)
   if (req.method === 'GET') {
     try {
       const { 
