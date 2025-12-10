@@ -54,29 +54,56 @@ export default async function handler(req, res) {
     try {
       console.log('Upload request received');
       console.log('Content-Type:', req.headers['content-type']);
+      console.log('Request body keys:', Object.keys(req.body || {}));
       
-      // Remove auth for now to test upload
-      // const authHeader = req.headers['authorization'];
-      // const token = authHeader && authHeader.split(' ')[1];
-      // if (!token) return res.status(401).json({ error: 'Access token required' });
-      // jwt.verify(token, process.env.JWT_SECRET);
+      // Auth check
+      const authHeader = req.headers['authorization'];
+      const token = authHeader && authHeader.split(' ')[1];
+      if (!token) return res.status(401).json({ error: 'Access token required' });
+      jwt.verify(token, process.env.JWT_SECRET);
 
-      // Handle multipart form data - for now just create a test newsletter
+      const { title, description, fileUrl, fileName, fileSize } = req.body;
+      
+      console.log('Upload data:', { title, description, fileName, fileSize, hasFileUrl: !!fileUrl });
+      
+      if (!title) {
+        return res.status(400).json({ error: 'Title is required' });
+      }
+      
+      if (!fileUrl) {
+        return res.status(400).json({ error: 'File data is required' });
+      }
+      
       const newsletter = new NewsletterIssue({
-        title: 'Test Newsletter ' + Date.now(),
-        description: 'Test upload',
-        fileUrl: 'data:application/pdf;base64,test',
-        fileName: 'test.pdf',
-        fileSize: 1000,
-        issueDate: Date.now(),
+        title,
+        description: description || '',
+        fileUrl,
+        fileName: fileName || 'newsletter.pdf',
+        fileSize: fileSize || 0,
+        issueDate: new Date(),
         status: 'published'
       });
       
-      await newsletter.save();
-      console.log('Newsletter saved successfully:', newsletter._id);
-      return res.status(201).json({ message: 'Newsletter uploaded successfully', newsletter });
+      const savedNewsletter = await newsletter.save();
+      console.log('Newsletter saved successfully:', savedNewsletter._id);
+      
+      return res.status(201).json({ 
+        message: 'Newsletter uploaded successfully!', 
+        newsletter: {
+          id: savedNewsletter._id,
+          title: savedNewsletter.title,
+          description: savedNewsletter.description,
+          fileName: savedNewsletter.fileName,
+          fileSize: savedNewsletter.fileSize,
+          issueDate: savedNewsletter.issueDate,
+          status: savedNewsletter.status
+        }
+      });
     } catch (error) {
       console.error('Upload error:', error);
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
       return res.status(500).json({ error: error.message });
     }
   }
