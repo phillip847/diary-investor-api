@@ -69,15 +69,7 @@ export default async function handler(req, res) {
 
       const total = await Article.countDocuments(query);
 
-      res.json({
-        articles,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / parseInt(limit))
-        }
-      });
+      res.json(articles);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
