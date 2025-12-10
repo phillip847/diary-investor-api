@@ -3,11 +3,18 @@ import { NewsletterIssue, Subscriber } from '../models/Newsletter.js';
 import jwt from 'jsonwebtoken';
 
 export default async function handler(req, res) {
+  console.log('=== NEWSLETTER ENDPOINT HIT ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Query:', req.query);
+  console.log('Headers:', req.headers);
+  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   if (req.method === 'OPTIONS') {
+    console.log('OPTIONS request handled');
     return res.status(200).end();
   }
 
