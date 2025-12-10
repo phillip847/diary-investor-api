@@ -15,22 +15,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, email, subject, message } = req.body;
+  const { name, email, company, partnershipType, message } = req.body;
 
-  if (!name || !email || !subject || !message) {
-    return res.status(400).json({ error: 'All fields are required' });
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: 'Name, email, and message are required' });
   }
 
   try {
     await sgMail.send({
       to: process.env.ADMIN_EMAIL,
       from: process.env.SENDGRID_FROM_EMAIL,
-      subject: `Contact Form: ${subject}`,
+      subject: `Partnership Inquiry from ${name}`,
       html: `
-        <h3>New Contact Form Submission</h3>
+        <h3>New Partnership Inquiry</h3>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Company/Organization:</strong> ${company || 'Not specified'}</p>
+        <p><strong>Partnership Type:</strong> ${partnershipType || 'Not specified'}</p>
         <p><strong>Message:</strong></p>
         <p>${message.replace(/\n/g, '<br>')}</p>
       `
