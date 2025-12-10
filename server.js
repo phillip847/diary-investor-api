@@ -21,7 +21,19 @@ app.use(compression());
 
 // CORS configuration
 app.use(cors({
-  origin: ['https://diaryofan-investor.vercel.app', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://diaryofan-investor.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001', 
+      'http://localhost:5173'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins for now
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -63,6 +75,12 @@ app.use('/newsletter', newsletterRouter);
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/contact', contactRouter);
+
+// Explicit admin newsletter route for debugging
+app.all('/api/admin/newsletter*', (req, res, next) => {
+  console.log(`Admin newsletter route hit: ${req.method} ${req.path}`);
+  next();
+});
 
 // Health check
 app.get('/api/health', (req, res) => {

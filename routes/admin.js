@@ -21,9 +21,20 @@ const upload = multer({
 
 const router = express.Router();
 
-// Apply authentication to all admin routes
-router.use(authenticateToken);
-router.use(requireAdmin);
+// Test endpoint (no auth required for debugging)
+router.get('/test', (req, res) => {
+  res.json({ message: 'Admin routes working', timestamp: new Date().toISOString() });
+});
+
+// Apply authentication to all admin routes except test
+router.use((req, res, next) => {
+  if (req.path === '/test') return next();
+  authenticateToken(req, res, next);
+});
+router.use((req, res, next) => {
+  if (req.path === '/test') return next();
+  requireAdmin(req, res, next);
+});
 
 // Dashboard stats
 router.get('/stats', async (req, res) => {
@@ -104,6 +115,11 @@ router.delete('/articles/bulk-delete', async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+});
+
+// Test newsletter endpoint (no auth)
+router.get('/newsletter/test', (req, res) => {
+  res.json({ message: 'Newsletter endpoint working', timestamp: new Date().toISOString() });
 });
 
 // Newsletter Management
