@@ -13,6 +13,7 @@ export default async function handler(req, res) {
 
   await connectDB();
   const { action, id } = req.query;
+  console.log('Newsletter API request:', { method: req.method, action, id });
 
   // Handle /api/newsletter?action=subscribe
   if (action === 'subscribe' && req.method === 'POST') {
@@ -129,30 +130,33 @@ export default async function handler(req, res) {
     }
   }
 
-  // Handle /api/newsletter?id={id} (GET or DELETE)
-  if (id) {
-    if (req.method === 'GET') {
-      try {
-        const newsletter = await NewsletterIssue.findById(id);
-        if (!newsletter) {
-          return res.status(404).json({ error: 'Newsletter not found' });
-        }
-        return res.json(newsletter);
-      } catch (error) {
-        return res.status(500).json({ error: error.message });
+  // Handle DELETE first
+  if (req.method === 'DELETE' && id) {
+    try {
+      console.log('Attempting to delete newsletter with ID:', id);
+      const newsletter = await NewsletterIssue.findByIdAndDelete(id);
+      if (!newsletter) {
+        console.log('Newsletter not found for deletion:', id);
+        return res.status(404).json({ error: 'Newsletter not found' });
       }
+      console.log('Newsletter deleted successfully:', id);
+      return res.json({ message: 'Newsletter deleted successfully' });
+    } catch (error) {
+      console.error('Delete error:', error);
+      return res.status(500).json({ error: error.message });
     }
-    
-    if (req.method === 'DELETE') {
-      try {
-        const newsletter = await NewsletterIssue.findByIdAndDelete(id);
-        if (!newsletter) {
-          return res.status(404).json({ error: 'Newsletter not found' });
-        }
-        return res.json({ message: 'Newsletter deleted successfully' });
-      } catch (error) {
-        return res.status(500).json({ error: error.message });
+  }
+
+  // Handle /api/newsletter?id={id} (GET)
+  if (id && req.method === 'GET') {
+    try {
+      const newsletter = await NewsletterIssue.findById(id);
+      if (!newsletter) {
+        return res.status(404).json({ error: 'Newsletter not found' });
       }
+      return res.json(newsletter);
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
     }
   }
 
