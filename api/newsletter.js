@@ -156,5 +156,17 @@ export default async function handler(req, res) {
     }
   }
 
+  // Default GET behavior - return list of newsletters
+  if (req.method === 'GET') {
+    try {
+      const newsletters = await NewsletterIssue.find({ status: 'published' })
+        .sort({ issueDate: -1 })
+        .select('-fileUrl');
+      return res.json(newsletters);
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   res.status(405).json({ error: 'Method not allowed' });
 }
