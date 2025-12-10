@@ -16,15 +16,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({ error: 'Access token required' });
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET);
-
     await connectDB();
     
     const { id } = req.query;
@@ -36,9 +27,6 @@ export default async function handler(req, res) {
     
     res.json({ message: 'Subscriber deleted successfully' });
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
     res.status(500).json({ error: error.message });
   }
 }
