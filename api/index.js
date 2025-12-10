@@ -72,7 +72,7 @@ const SessionBooking = mongoose.models.SessionBooking || mongoose.model('Session
 
 export default async (req, res) => {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', 'https://diaryofan-investor.vercel.app');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -242,8 +242,13 @@ export default async (req, res) => {
 
     if (pathname === '/api/newsletter/list') {
       if (method === 'GET') {
-        // Return empty array for now since we don't have newsletter issues in old schema
-        return res.json([]);
+        try {
+          // Return empty array for now since we don't have newsletter issues in old schema
+          return res.json([]);
+        } catch (error) {
+          console.error('Newsletter list error:', error);
+          return res.status(500).json({ error: 'Failed to fetch newsletters' });
+        }
       }
     }
 
