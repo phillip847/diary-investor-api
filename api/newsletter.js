@@ -191,11 +191,18 @@ export default async function handler(req, res) {
   // Default GET behavior - return list of newsletters
   if (req.method === 'GET') {
     try {
-      const newsletters = await NewsletterIssue.find({ status: 'published' })
+      console.log('Fetching newsletters...');
+      const allNewsletters = await NewsletterIssue.find({});
+      console.log('All newsletters in DB:', allNewsletters.length);
+      
+      const publishedNewsletters = await NewsletterIssue.find({ status: 'published' })
         .sort({ issueDate: -1 })
         .select('-fileUrl');
-      return res.json(newsletters);
+      console.log('Published newsletters:', publishedNewsletters.length);
+      
+      return res.json(publishedNewsletters);
     } catch (error) {
+      console.error('Newsletter fetch error:', error);
       return res.status(500).json({ error: error.message });
     }
   }
