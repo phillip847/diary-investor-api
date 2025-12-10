@@ -56,3 +56,19 @@ export const sendNewsletterToSubscribers = async (subscribers, newsletterTitle, 
     html: `<h2>New Newsletter Available</h2><p><strong>${newsletterTitle}</strong></p><p><a href="${newsletterUrl}">Read Newsletter</a></p>`,
   });
 };
+
+export const sendNewsletterEmail = async (email, newsletter) => {
+  const baseUrl = process.env.FRONTEND_URL || 'https://diaryofan-investor.vercel.app';
+  const newsletterUrl = `${baseUrl}/newsletter/${newsletter._id}`;
+  
+  return await sendEmail({
+    to: email,
+    subject: `New Newsletter: ${newsletter.title}`,
+    text: `${newsletter.description}\n\nRead the full newsletter at: ${newsletterUrl}`,
+    html: `
+      <h2>${newsletter.title}</h2>
+      <p>${newsletter.description}</p>
+      <p><a href="${newsletterUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Read Newsletter</a></p>
+    `,
+  });
+};

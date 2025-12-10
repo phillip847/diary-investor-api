@@ -23,6 +23,7 @@ const newsletterIssueSchema = new mongoose.Schema({
     required: true,
   },
   description: String,
+  message: String, // For admin message/description
   fileUrl: {
     type: String,
     required: true,
@@ -38,6 +39,8 @@ const newsletterIssueSchema = new mongoose.Schema({
     enum: ['draft', 'published'],
     default: 'published',
   },
+  sentAt: Date, // Track when newsletter was sent
+  sentCount: { type: Number, default: 0 }, // Track how many emails were sent
 }, {
   timestamps: true,
 });
