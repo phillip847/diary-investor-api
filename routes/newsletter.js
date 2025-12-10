@@ -59,20 +59,34 @@ router.post('/subscribe', async (req, res) => {
 
 // Upload newsletter (admin only)
 router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
+  console.log('=== NEWSLETTER UPLOAD ENDPOINT HIT ===');
+  console.log('Request body:', req.body);
+  console.log('File info:', req.file ? {
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size
+  } : 'No file');
+  
   try {
     const { title, description, issueDate } = req.body;
     
+    console.log('Extracted data:', { title, description, issueDate });
+    
     if (!req.file) {
+      console.log('ERROR: No file provided');
       return res.status(400).json({ error: 'PDF file is required' });
     }
     
     if (!title) {
+      console.log('ERROR: No title provided');
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    console.log('Converting file to base64...');
     // Convert file to base64 for storage
     const fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     
+    console.log('Creating newsletter document...');
     const newsletter = new NewsletterIssue({
       title,
       description,
@@ -82,9 +96,24 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
       issueDate: issueDate || Date.now(),
     });
     
-    await newsletter.save();
-    res.status(201).json({ message: 'Newsletter uploaded successfully', newsletter });
+    console.log('Saving newsletter to database...');
+    const savedNewsletter = await newsletter.save();
+    console.log('Newsletter saved successfully with ID:', savedNewsletter._id);
+    
+    res.status(201).json({ 
+      message: 'Newsletter uploaded successfully!', 
+      newsletter: {
+        id: savedNewsletter._id,
+        title: savedNewsletter.title,
+        description: savedNewsletter.description,
+        fileName: savedNewsletter.fileName,
+        fileSize: savedNewsletter.fileSize,
+        issueDate: savedNewsletter.issueDate,
+        status: savedNewsletter.status
+      }
+    });
   } catch (error) {
+    console.error('Newsletter upload error:', error);
     res.status(500).json({ error: error.message });
   }
 });
