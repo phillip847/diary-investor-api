@@ -110,6 +110,99 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Get all articles for admin
+router.get('/articles', async (req, res) => {
+  try {
+    const articles = await Article.find()
+      .sort({ createdAt: -1 })
+      .select('title slug category status createdAt updatedAt');
+    res.json(articles);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single article with full details
+router.get('/articles/:id', async (req, res) => {
+  try {
+    const article = await Article.findById(req.params.id).lean();
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    // Map publishDate to publishedDate for frontend compatibility
+    if (article.publishDate) {
+      article.publishedDate = article.publishDate.toISOString().split('T')[0];
+    } else {
+      article.publishedDate = new Date().toISOString().split('T')[0];
+    }
+    
+    res.json(article);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create article
+router.post('/articles', async (req, res) => {
+  try {
+    const articleData = req.body;
+    
+    // Generate slug if not provided
+    if (!articleData.slug && articleData.title) {
+      articleData.slug = articleData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
+    const article = new Article(articleData);
+    await article.save();
+    
+    res.status(201).json(article);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update article
+router.put('/articles', async (req, res) => {
+  try {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Article ID required' });
+    
+    const updateData = req.body;
+    
+    // Generate slug if title changed
+    if (updateData.title && !updateData.slug) {
+      updateData.slug = updateData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+    }
+
+    const article = await Article.findByIdAndUpdate(id, updateData, { new: true });
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    res.json(article);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete article
+router.delete('/articles', async (req, res) => {
+  try {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Article ID required' });
+
+    const article = await Article.findByIdAndDelete(id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    
+    res.json({ message: 'Article deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get article preview
 router.get('/articles/:id/preview', async (req, res) => {
   try {

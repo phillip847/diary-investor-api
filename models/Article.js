@@ -13,7 +13,7 @@ const articleSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['Namibia', 'South Africa', 'Global Markets', 'Crypto', 'Investing Guides', 'Housing & Personal Finance', 'Business & Entrepreneurship'],
+    enum: ['Namibia', 'South Africa', 'Global Markets', 'Crypto', 'Investing Guides', 'Housing & Personal Finance', 'Business & Entrepreneurship', 'education'],
     required: true,
   },
   tags: [String],
