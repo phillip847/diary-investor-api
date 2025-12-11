@@ -19,21 +19,9 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(compression());
 
-// CORS configuration
+// CORS configuration - Allow all origins
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'https://diaryofan-investor.vercel.app',
-      'http://localhost:3000',
-      'http://localhost:3001', 
-      'http://localhost:5173'
-    ];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all origins for now
-    }
-  },
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -54,7 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Global CORS headers middleware
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://diaryofan-investor.vercel.app');
+  res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
