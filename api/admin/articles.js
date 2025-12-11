@@ -13,7 +13,16 @@ export default async function handler(req, res) {
 
   await connectDB();
 
-  if (req.method === 'POST') {
+  if (req.method === 'GET') {
+    try {
+      const articles = await Article.find()
+        .sort({ createdAt: -1 })
+        .select('title slug category status createdAt updatedAt');
+      res.json(articles);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  } else if (req.method === 'POST') {
     try {
       const articleData = req.body;
       
