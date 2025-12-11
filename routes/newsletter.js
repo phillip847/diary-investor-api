@@ -130,6 +130,17 @@ router.get('/list', async (req, res) => {
   }
 });
 
+// Public route to get all newsletters (with file data for viewing)
+router.get('/public', async (req, res) => {
+  try {
+    const newsletters = await NewsletterIssue.find()
+      .sort({ createdAt: -1 });
+    res.json(newsletters);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get single newsletter with file
 router.get('/:id', async (req, res) => {
   try {

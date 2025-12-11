@@ -21,18 +21,53 @@ const upload = multer({
 
 const router = express.Router();
 
+// Delete subscriber route (before any middleware)
+router.delete('/newsletter/subscribers/:id', async (req, res) => {
+  try {
+    const subscriber = await Subscriber.findByIdAndDelete(req.params.id);
+    if (!subscriber) return res.status(404).json({ error: 'Subscriber not found' });
+    res.json({ message: 'Subscriber deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Log all admin requests
+router.use((req, res, next) => {
+  console.log(`Admin route: ${req.method} ${req.path}`);
+  console.log('Full URL:', req.originalUrl);
+  console.log('Headers:', req.headers.authorization ? 'Has auth token' : 'No auth token');
+  next();
+});
+
 // Test endpoint (no auth required for debugging)
 router.get('/test', (req, res) => {
   res.json({ message: 'Admin routes working', timestamp: new Date().toISOString() });
 });
 
-// Apply authentication to all admin routes except test
+// Debug endpoint to test file upload without auth
+router.post('/debug', upload.single('pdf'), (req, res) => {
+  console.log('=== DEBUG ENDPOINT ===');
+  console.log('Body:', req.body);
+  console.log('File:', req.file);
+  res.json({ 
+    body: req.body, 
+    file: req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : null
+  });
+});
+
+// Apply authentication to all admin routes except test and debug
 router.use((req, res, next) => {
-  if (req.path === '/test') return next();
+  if (req.path === '/test' || req.path === '/debug') return next();
   authenticateToken(req, res, next);
 });
 router.use((req, res, next) => {
-  if (req.path === '/test') return next();
+  if (req.path === '/test' || req.path === '/debug') return next();
   requireAdmin(req, res, next);
 });
 
@@ -122,6 +157,26 @@ router.get('/newsletter/test', (req, res) => {
   res.json({ message: 'Newsletter endpoint working', timestamp: new Date().toISOString() });
 });
 
+// Test subscriber endpoint
+router.get('/newsletter/subscribers/test', (req, res) => {
+  console.log('Subscriber test endpoint hit');
+  res.json({ message: 'Subscriber endpoint working', timestamp: new Date().toISOString() });
+});
+
+
+
+// Subscriber Management (must come before newsletter/:id routes)
+router.get('/newsletter/subscribers', async (req, res) => {
+  try {
+    const subscribers = await Subscriber.find().sort({ createdAt: -1 });
+    res.json(subscribers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
 // Newsletter Management
 router.get('/newsletter', async (req, res) => {
   try {
@@ -133,12 +188,30 @@ router.get('/newsletter', async (req, res) => {
 });
 
 router.post('/newsletter', upload.single('pdf'), async (req, res) => {
+  console.log('=== ADMIN NEWSLETTER POST REQUEST ===');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('File:', req.file ? {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    mimetype: req.file.mimetype,
+    size: req.file.size
+  } : 'No file received');
+  
   try {
     const { title, message } = req.body;
     const file = req.file;
     
+    console.log('Extracted data:', { title, message });
+    
     if (!file) {
+      console.log('ERROR: No file provided');
       return res.status(400).json({ error: 'PDF file is required' });
+    }
+
+    if (!title) {
+      console.log('ERROR: No title provided');
+      return res.status(400).json({ error: 'Title is required' });
     }
 
     // Convert file to base64 for MongoDB storage
@@ -153,9 +226,12 @@ router.post('/newsletter', upload.single('pdf'), async (req, res) => {
       fileSize: file.size
     });
 
+    console.log('Saving newsletter to database...');
     await newsletter.save();
+    console.log('Newsletter saved successfully');
     res.status(201).json(newsletter);
   } catch (error) {
+    console.error('Admin newsletter creation error:', error);
     res.status(400).json({ error: error.message });
   }
 });

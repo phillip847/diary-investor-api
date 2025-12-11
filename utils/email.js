@@ -58,17 +58,32 @@ export const sendNewsletterToSubscribers = async (subscribers, newsletterTitle, 
 };
 
 export const sendNewsletterEmail = async (email, newsletter) => {
-  const baseUrl = process.env.FRONTEND_URL || 'https://diaryofan-investor.vercel.app';
-  const newsletterUrl = `${baseUrl}/newsletter/${newsletter._id}`;
+  if (!newsletter.fileUrl) {
+    throw new Error('Newsletter has no PDF file attached');
+  }
   
-  return await sendEmail({
+  // Convert base64 fileUrl back to buffer
+  const base64Data = newsletter.fileUrl.replace('data:application/pdf;base64,', '');
+  
+  const msg = {
     to: email,
+    from: process.env.SENDGRID_FROM_EMAIL,
     subject: `New Newsletter: ${newsletter.title}`,
-    text: `${newsletter.description}\n\nRead the full newsletter at: ${newsletterUrl}`,
+    text: `${newsletter.description || newsletter.message || ''}\n\nPlease find the newsletter attached as a PDF file.`,
     html: `
       <h2>${newsletter.title}</h2>
-      <p>${newsletter.description}</p>
-      <p><a href="${newsletterUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Read Newsletter</a></p>
+      <p>${newsletter.description || newsletter.message || ''}</p>
+      <p>Please find the newsletter attached as a PDF file.</p>
     `,
-  });
+    attachments: [
+      {
+        content: base64Data,
+        filename: newsletter.fileName || `${newsletter.title}.pdf`,
+        type: 'application/pdf',
+        disposition: 'attachment'
+      }
+    ]
+  };
+  
+  return await sgMail.send(msg);
 };
