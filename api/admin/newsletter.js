@@ -33,6 +33,10 @@ export default async function handler(req, res) {
       if (!title) {
         return res.status(400).json({ error: 'Title is required' });
       }
+      
+      if (!fileUrl) {
+        return res.status(400).json({ error: 'PDF file is required' });
+      }
 
       const newsletter = new NewsletterIssue({
         title,
