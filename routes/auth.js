@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/', async (req, res) => {
   try {
     const { username, password } = req.body;
+    console.log('Login attempt:', { username, password: password ? '[HIDDEN]' : 'undefined' });
     
     // Simple hardcoded admin check
     if (username === 'admin' && password === '123456') {
@@ -60,6 +61,16 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+});
+
+// Test endpoint to debug credentials
+router.post('/test', (req, res) => {
+  const { username, password } = req.body;
+  res.json({ 
+    received: { username, password },
+    expected: { username: 'admin', password: '123456' },
+    match: username === 'admin' && password === '123456'
+  });
 });
 
 export default router;
