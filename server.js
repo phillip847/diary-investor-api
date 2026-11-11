@@ -23,7 +23,7 @@ app.use(compression());
 app.use(cors({
   origin: true,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   optionsSuccessStatus: 200
 }));
@@ -31,7 +31,7 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.sendStatus(200);
@@ -40,13 +40,14 @@ app.options('*', (req, res) => {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Global CORS headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  next();
+// Make sure the database is connected before any handler runs.
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch {
+    res.status(503).json({ error: 'Database unavailable, please try again shortly' });
+  }
 });
 
 // Root route
@@ -64,19 +65,13 @@ app.use('/api/newsletter', newsletterRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/contact', contactRouter);
 
-// Explicit admin newsletter route for debugging
-app.all('/api/admin/newsletter*', (req, res, next) => {
-  console.log(`Admin newsletter route hit: ${req.method} ${req.path}`);
-  next();
-});
-
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Initialize database
-connectDB();
+// Unknown API routes
+app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
 // Listen everywhere except on Vercel, which invokes the exported app itself
 if (!process.env.VERCEL) {
