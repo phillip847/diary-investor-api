@@ -11,6 +11,11 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  // bcrypt hash; excluded from queries unless explicitly selected
+  passwordHash: {
+    type: String,
+    select: false,
+  },
   role: {
     type: String,
     enum: ['admin'],

@@ -8,6 +8,7 @@
     "seed:pages": "node seed-static-pages.js",
     "migrate:newsletter": "node migrate-newsletter.js",
     "test:newsletter": "node test-newsletter.js",
+    "create-admin": "node create-admin.js",
     "vercel-build": "echo 'Build complete'"
   },
   "dependencies": {

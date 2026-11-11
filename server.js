@@ -78,8 +78,8 @@ app.get('/api/health', (req, res) => {
 // Initialize database
 connectDB();
 
-// Only listen in development
-if (process.env.NODE_ENV !== 'production') {
+// Listen everywhere except on Vercel, which invokes the exported app itself
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

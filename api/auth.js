@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import connectDB from '../config/database.js';
 import User from '../models/User.js';
+import { verifyAdminCredentials } from '../utils/adminAuth.js';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -21,17 +22,8 @@ export default async function handler(req, res) {
     
     const { username, password } = req.body;
     
-    if (username === 'admin' && password === '123456') {
-      let user = await User.findOne({ username });
-      if (!user) {
-        user = new User({ 
-          username, 
-          email: 'admin@admin.com',
-          role: 'admin'
-        });
-        await user.save();
-      }
-
+    const user = await verifyAdminCredentials(username, password);
+    if (user) {
       const token = jwt.sign(
         { userId: user._id, username: user.username, role: user.role },
         process.env.JWT_SECRET,
