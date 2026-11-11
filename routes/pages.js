@@ -1,6 +1,6 @@
 import express from 'express';
 import StaticPage from '../models/StaticPage.js';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { authenticateToken, requireReviewer } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.get('/:page', async (req, res) => {
 });
 
 // Update page content (admin only)
-router.put('/:page', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:page', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const page = await StaticPage.findOneAndUpdate(
       { page: req.params.page },
@@ -40,7 +40,7 @@ router.put('/:page', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Add content block
-router.post('/:page/blocks', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/:page/blocks', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const { page } = req.params;
     const block = { ...req.body, id: Date.now().toString() };
@@ -59,7 +59,7 @@ router.post('/:page/blocks', authenticateToken, requireAdmin, async (req, res) =
 });
 
 // Update content block
-router.put('/:page/blocks/:blockId', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:page/blocks/:blockId', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const { page, blockId } = req.params;
     
@@ -79,7 +79,7 @@ router.put('/:page/blocks/:blockId', authenticateToken, requireAdmin, async (req
 });
 
 // Delete content block
-router.delete('/:page/blocks/:blockId', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:page/blocks/:blockId', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const { page, blockId } = req.params;
     

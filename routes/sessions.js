@@ -1,6 +1,6 @@
 import express from 'express';
 import SessionBooking from '../models/SessionBooking.js';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+import { authenticateToken, requireReviewer } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.post('/', async (req, res) => {
 });
 
 // Admin: Get all bookings
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const { status } = req.query;
     const filter = status ? { status } : {};
@@ -28,22 +28,24 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // Admin: Update booking status
-router.patch('/:id', authenticateToken, requireAdmin, async (req, res) => {
+const updateStatus = async (req, res) => {
   try {
     const booking = await SessionBooking.findByIdAndUpdate(
       req.params.id,
       { status: req.body.status },
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
     res.json(booking);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
-});
+};
+router.patch('/:id', authenticateToken, requireReviewer, updateStatus);
+router.put('/:id', authenticateToken, requireReviewer, updateStatus);
 
 // Admin: Delete booking
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticateToken, requireReviewer, async (req, res) => {
   try {
     const booking = await SessionBooking.findByIdAndDelete(req.params.id);
     if (!booking) return res.status(404).json({ error: 'Booking not found' });

@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+export const ROLES = ['admin', 'editor', 'author'];
+
+// Editors and admins can review and publish; authors only write their own drafts.
+export const canReview = (user) => user?.role === 'admin' || user?.role === 'editor';
+
 export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -11,25 +16,29 @@ export const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Load the user fresh so role changes and deletions apply immediately.
     const user = await User.findById(decoded.userId);
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
     req.user = user;
     next();
-  } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 
-export const requireAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin access required' });
+export const requireRole = (...roles) => (req, res, next) => {
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'You do not have permission to do that' });
   }
   next();
 };
+
+export const requireAdmin = requireRole('admin');
+export const requireReviewer = requireRole('admin', 'editor');
 
 // Alias for compatibility
 export const verifyToken = authenticateToken;

@@ -5,11 +5,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+    trim: true,
   },
   email: {
     type: String,
     required: true,
     unique: true,
+    trim: true,
+    lowercase: true,
   },
   // bcrypt hash; excluded from queries unless explicitly selected
   passwordHash: {
@@ -18,8 +21,8 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['admin'],
-    default: 'admin',
+    enum: ['admin', 'editor', 'author'],
+    default: 'author',
   },
 }, {
   timestamps: true,
