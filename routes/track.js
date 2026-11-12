@@ -1,5 +1,6 @@
 import express from 'express';
 import PageView from '../models/PageView.js';
+import { geoFromHeaders } from '../utils/geo.js';
 
 // Public page-view beacon. Accepts text/plain JSON so browsers send it
 // without a CORS preflight. Always answers 204, even for ignored hits.
@@ -44,6 +45,7 @@ router.post('/', express.text({ type: '*/*', limit: '2kb' }), async (req, res) =
       referrer: SITE_HOSTS.has(referrer) ? '' : referrer,
       device: deviceFrom(ua),
       visitorId: typeof body.visitorId === 'string' ? body.visitorId.slice(0, 64) : undefined,
+      ...geoFromHeaders(req),
     });
   } catch {
     // Tracking must never break the site; ignore malformed hits.

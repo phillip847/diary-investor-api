@@ -8,6 +8,10 @@ const pageViewSchema = new mongoose.Schema({
   referrer: String, // host only, e.g. "google.com"; empty for direct visits
   device: { type: String, enum: ['mobile', 'tablet', 'desktop'], default: 'desktop' },
   visitorId: String,
+  // Approximate location from the hosting provider's geo headers (no IP stored).
+  country: String, // ISO 3166-1 alpha-2, e.g. "NA"
+  region: String, // ISO 3166-2 subdivision, e.g. "KH" (Khomas)
+  city: String,
   createdAt: { type: Date, default: Date.now },
 }, { versionKey: false });
 

@@ -4,6 +4,7 @@ import PageView from '../models/PageView.js';
 import SessionBooking from '../models/SessionBooking.js';
 import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
 import { authenticateToken, requireReviewer } from '../middleware/auth.js';
+import { countryName, regionName } from '../utils/geo.js';
 
 // Dashboard reports for editors and admins. Every figure is scoped to the
 // same date range so the numbers on the page always agree.
@@ -72,6 +73,25 @@ async function topBy(Model, match, field, limit, emptyLabel) {
 
 const between = (from, to) => ({ $gte: from, $lte: to });
 
+// Views and unique visitors per group, largest audience first.
+const audienceBy = (match, id, limit, extra = {}) => PageView.aggregate([
+  { $match: match },
+  { $group: { _id: id, views: { $sum: 1 }, ids: { $addToSet: '$visitorId' }, ...extra } },
+  { $project: { views: 1, visitors: { $size: '$ids' }, city: 1 } },
+  { $sort: { visitors: -1, views: -1, _id: 1 } },
+  { $limit: limit },
+]);
+
+// Views per hour of day (0-23) or ISO weekday (1-7), local time.
+async function viewsBy(match, op, size, first) {
+  const rows = await PageView.aggregate([
+    { $match: match },
+    { $group: { _id: { [op]: { date: '$createdAt', timezone: TZ } }, n: { $sum: 1 } } },
+  ]);
+  const byKey = Object.fromEntries(rows.map(r => [r._id, r.n]));
+  return Array.from({ length: size }, (_, i) => ({ key: String(i + first), value: byKey[i + first] || 0 }));
+}
+
 router.get('/', async (req, res) => {
   try {
     const days = RANGES.includes(Number(req.query.days)) ? Number(req.query.days) : 30;
@@ -87,6 +107,7 @@ router.get('/', async (req, res) => {
 
     const [
       views, prevViews, visitorRows, trafficRows, topPages, articleRows, referrers, devices,
+      countryRows, regionRows, locatedViews, byHour, byWeekday,
       publishedCount, publishedSeries, submittedCount, pendingNow, reviewRows, byCategory, byAuthor,
       newSubscribers, subscriberSeries, totalSubscribers, sentRows,
       bookings, bookingSeries, bookingsByStatus,
@@ -102,6 +123,16 @@ router.get('/', async (req, res) => {
       topBy(PageView, { ...inRange, articleSlug: { $ne: null } }, 'articleSlug', 10, ''),
       topBy(PageView, inRange, 'referrer', 8, 'Direct / unknown'),
       topBy(PageView, inRange, 'device', 3, 'desktop'),
+      audienceBy({ ...inRange, country: { $exists: true } }, '$country', 12),
+      audienceBy(
+        { ...inRange, country: { $exists: true } },
+        { country: '$country', region: '$region' },
+        12,
+        { city: { $first: '$city' } },
+      ),
+      PageView.countDocuments({ ...inRange, country: { $exists: true } }),
+      viewsBy(inRange, '$hour', 24, 0),
+      viewsBy(inRange, '$isoDayOfWeek', 7, 1),
 
       Article.countDocuments(published),
       countSeries(Article, published, 'publishDate', unit, keys),
@@ -153,6 +184,16 @@ router.get('/', async (req, res) => {
         topArticles,
         referrers,
         devices,
+        located: locatedViews,
+        countries: countryRows.map(r => ({ code: r._id, label: countryName(r._id), visitors: r.visitors, views: r.views })),
+        regions: regionRows.map(r => ({
+          label: [regionName(r._id.country, r._id.region, r.city), countryName(r._id.country)].filter(Boolean).join(', '),
+          country: r._id.country,
+          visitors: r.visitors,
+          views: r.views,
+        })),
+        byHour,
+        byWeekday,
       },
       content: {
         published: publishedCount,
