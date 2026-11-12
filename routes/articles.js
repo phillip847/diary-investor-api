@@ -10,8 +10,14 @@ const PUBLISHED = { status: 'published' };
 const LIST_FIELDS = 'title subtitle slug category tags thumbnail thumbnailAlt featured status publishDate createdAt authorName';
 
 // List published articles. Returns a plain array (what the site has always consumed).
+// ?slug= or ?id= returns a single article instead (the older function-style API).
 router.get('/', async (req, res) => {
   try {
+    if (req.query.slug) return await sendOne(res, { slug: req.query.slug });
+    if (req.query.id) {
+      const { id } = req.query;
+      return await sendOne(res, mongoose.Types.ObjectId.isValid(id) ? { _id: id } : { slug: id });
+    }
     const { category, tag, search, featured, limit = 50, offset, page } = req.query;
     const filter = { ...PUBLISHED };
     if (category) filter.category = category;

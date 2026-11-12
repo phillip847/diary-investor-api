@@ -10,6 +10,9 @@ import adminRouter from './routes/admin.js';
 import newsletterRouter from './routes/newsletter.js';
 import sessionsRouter from './routes/sessions.js';
 import contactRouter from './routes/contact.js';
+import reportsRouter from './routes/reports.js';
+import trackRouter from './routes/track.js';
+import imagesRouter from './routes/images.js';
 
 dotenv.config();
 
@@ -59,7 +62,10 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/articles', articlesRouter);
 app.use('/api/pages', pagesRouter);
+app.use('/api/admin/reports', reportsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/track', trackRouter);
+app.use('/api/images', imagesRouter);
 app.use('/newsletter', newsletterRouter);
 app.use('/api/newsletter', newsletterRouter);
 app.use('/api/sessions', sessionsRouter);

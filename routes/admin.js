@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import Article, { ARTICLE_STATUSES } from '../models/Article.js';
 import User from '../models/User.js';
+import Image from '../models/Image.js';
 import SessionBooking from '../models/SessionBooking.js';
 import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
 import { authenticateToken, requireAdmin, requireReviewer, canReview, ROLES } from '../middleware/auth.js';
@@ -20,6 +21,20 @@ const upload = multer({
     }
   }
 });
+
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 4 * 1024 * 1024 }, // stays under Vercel's 4.5 MB request cap
+  fileFilter: (req, file, cb) => {
+    if (IMAGE_TYPES.includes(file.mimetype)) cb(null, true);
+    else cb(new HttpError(400, 'Images must be JPEG, PNG, WebP or GIF'));
+  }
+});
+
+// Image URLs are saved inside article HTML, so they always point at the
+// public API (even when uploaded from a local dashboard against the same DB).
+const PUBLIC_API_URL = (process.env.PUBLIC_API_URL || 'https://diary-investor-api.vercel.app').replace(/\/+$/, '');
 
 const router = express.Router();
 
@@ -282,6 +297,27 @@ router.post('/articles/:id/reject', requireReviewer, async (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
+/* Images (any signed-in user, for articles)                           */
+/* ------------------------------------------------------------------ */
+
+router.post('/images', imageUpload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) throw new HttpError(400, 'Choose an image to upload');
+    const image = await Image.create({
+      data: req.file.buffer,
+      contentType: req.file.mimetype,
+      size: req.file.size,
+      fileName: req.file.originalname,
+      uploadedBy: req.user._id,
+      uploadedByName: req.user.username,
+    });
+    res.status(201).json({ id: image._id, url: `${PUBLIC_API_URL}/api/images/${image._id}`, size: image.size });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+/* ------------------------------------------------------------------ */
 /* Users (admins only)                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -504,9 +540,11 @@ router.post('/newsletter/:id/send', requireReviewer, async (req, res) => {
 // Multer errors (wrong file type, too large) arrive here.
 // eslint-disable-next-line no-unused-vars
 router.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError || error.message === 'Only PDF files are allowed') {
-    return res.status(400).json({ error: error.message });
+  if (error instanceof multer.MulterError) {
+    const message = error.code === 'LIMIT_FILE_SIZE' ? 'That file is too large' : error.message;
+    return res.status(400).json({ error: message });
   }
+  if (error.message === 'Only PDF files are allowed') return res.status(400).json({ error: error.message });
   sendError(res, error);
 });
 
