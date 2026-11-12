@@ -5,6 +5,8 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 export const sendEmail = async ({ to, subject, text, html }) => {
   const msg = {
     to,
+    // With several recipients, send each their own copy so addresses stay private.
+    isMultiple: Array.isArray(to) && to.length > 1,
     from: process.env.SENDGRID_FROM_EMAIL,
     subject,
     text,

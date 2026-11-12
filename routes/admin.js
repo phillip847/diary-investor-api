@@ -9,6 +9,7 @@ import SessionBooking from '../models/SessionBooking.js';
 import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
 import { authenticateToken, requireAdmin, requireReviewer, canReview, ROLES } from '../middleware/auth.js';
 import { sendNewsletterEmail } from '../utils/email.js';
+import NewsletterSend from '../models/NewsletterSend.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -520,22 +521,50 @@ router.post('/newsletter/:id/send', requireReviewer, async (req, res) => {
     if (!newsletter) return res.status(404).json({ error: 'Newsletter not found' });
 
     const subscribers = await Subscriber.find({ status: 'active' });
-    let sentCount = 0;
+    if (!subscribers.length) return res.status(400).json({ error: 'There are no active subscribers to send to.' });
+
+    const recipients = [];
     for (const subscriber of subscribers) {
       try {
         await sendNewsletterEmail(subscriber.email, newsletter);
-        sentCount++;
+        recipients.push({ email: subscriber.email, status: 'sent' });
       } catch (emailError) {
         console.error(`Failed to send to ${subscriber.email}:`, emailError);
+        recipients.push({ email: subscriber.email, status: 'failed', error: emailFailureReason(emailError) });
       }
     }
 
-    await NewsletterIssue.findByIdAndUpdate(req.params.id, { sentAt: new Date(), sentCount });
-    res.json({ message: `Newsletter sent to ${sentCount} of ${subscribers.length} subscribers`, sentCount });
+    const sent = recipients.filter(r => r.status === 'sent').length;
+    const failed = recipients.length - sent;
+    const now = new Date();
+    await NewsletterSend.create({
+      issue: newsletter._id,
+      title: newsletter.title,
+      sentBy: req.user.username,
+      total: recipients.length,
+      sent,
+      failed,
+      recipients,
+      createdAt: now,
+    });
+    await NewsletterIssue.findByIdAndUpdate(req.params.id, { sentAt: now, sentCount: sent });
+
+    const message = failed
+      ? `Sent to ${sent} of ${recipients.length} subscribers. ${failed} failed; see Reports for the reasons.`
+      : `Newsletter sent to all ${sent} subscribers.`;
+    res.json({ message, sentCount: sent, failedCount: failed, total: recipients.length });
   } catch (error) {
     sendError(res, error);
   }
 });
+
+// Short, readable reason from a SendGrid (or other) error.
+function emailFailureReason(error) {
+  const detail = error?.response?.body?.errors?.map(e => e.message).filter(Boolean).join('; ');
+  const text = String(detail || error?.message || 'Unknown error');
+  const status = error?.code || error?.response?.statusCode;
+  return (status && !text.includes(String(status)) ? `${text} (${status})` : text).slice(0, 200);
+}
 
 // Multer errors (wrong file type, too large) arrive here.
 // eslint-disable-next-line no-unused-vars

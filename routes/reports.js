@@ -3,6 +3,7 @@ import Article from '../models/Article.js';
 import PageView from '../models/PageView.js';
 import SessionBooking from '../models/SessionBooking.js';
 import { Subscriber, NewsletterIssue } from '../models/Newsletter.js';
+import NewsletterSend from '../models/NewsletterSend.js';
 import { authenticateToken, requireReviewer } from '../middleware/auth.js';
 import { countryName, regionName } from '../utils/geo.js';
 
@@ -16,6 +17,7 @@ const TZ = '+02:00';
 const OFFSET_MS = 2 * 60 * 60 * 1000;
 const DAY = 24 * 60 * 60 * 1000;
 const RANGES = [7, 30, 90, 365];
+const MAX_CUSTOM_DAYS = 3 * 366;
 
 const unitFor = (days) => (days <= 31 ? 'day' : days <= 120 ? 'week' : 'month');
 
@@ -73,6 +75,87 @@ async function topBy(Model, match, field, limit, emptyLabel) {
 
 const between = (from, to) => ({ $gte: from, $lte: to });
 
+// UTC instant of local (UTC+2) midnight at the start of a YYYY-MM-DD date.
+function localMidnight(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
+  if (!m) return null;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]) - OFFSET_MS;
+  return Number.isNaN(t) || keyOf(new Date(t + OFFSET_MS)) !== ymd ? null : new Date(t);
+}
+
+// Either a preset (?days=7|30|90|365) or a custom ?from=YYYY-MM-DD&to=YYYY-MM-DD (inclusive).
+function resolveRange(query) {
+  const now = new Date();
+  if (query.from || query.to) {
+    const start = localMidnight(query.from);
+    const endDay = localMidnight(query.to);
+    if (!start || !endDay) throw Object.assign(new Error('Dates must be valid and written as YYYY-MM-DD.'), { status: 400 });
+    if (start > endDay) throw Object.assign(new Error('The start date must be on or before the end date.'), { status: 400 });
+    if (start > now) throw Object.assign(new Error('The start date is in the future.'), { status: 400 });
+    const days = Math.round((endDay - start) / DAY) + 1;
+    if (days > MAX_CUSTOM_DAYS) throw Object.assign(new Error('Custom ranges can be at most three years.'), { status: 400 });
+    const endOfDay = new Date(endDay.getTime() + DAY - 1);
+    return { days, custom: true, from: start, to: endOfDay < now ? endOfDay : now };
+  }
+  const days = RANGES.includes(Number(query.days)) ? Number(query.days) : 30;
+  // Start at local midnight so "last 7 days" means 7 whole calendar days.
+  const from = new Date(truncate(new Date(now.getTime() - (days - 1) * DAY), 'day').getTime() - OFFSET_MS);
+  return { days, custom: false, from, to: now };
+}
+
+// Newsletter sends in range: the send log, plus older sends made before the
+// log existed (those only recorded a success count).
+async function newsletterReport(from, to, unit, keys) {
+  const [sends, loggedIssues, failures] = await Promise.all([
+    NewsletterSend.find({ createdAt: between(from, to) }).select('-recipients').sort({ createdAt: -1 }).lean(),
+    NewsletterSend.distinct('issue'),
+    NewsletterSend.aggregate([
+      { $match: { createdAt: between(from, to), failed: { $gt: 0 } } },
+      { $sort: { createdAt: -1 } },
+      { $unwind: '$recipients' },
+      { $match: { 'recipients.status': 'failed' } },
+      { $limit: 100 },
+      { $project: { _id: 0, email: '$recipients.email', error: '$recipients.error', title: 1, sentAt: '$createdAt' } },
+    ]),
+  ]);
+  const legacy = await NewsletterIssue.find({ sentAt: between(from, to), _id: { $nin: loggedIssues } })
+    .select('title sentAt sentCount').lean();
+
+  const history = [
+    ...sends.map(s => ({
+      id: String(s._id), title: s.title, sentAt: s.createdAt, sentBy: s.sentBy || null,
+      total: s.total, sent: s.sent, failed: s.failed,
+    })),
+    ...legacy.map(i => ({
+      id: String(i._id), title: i.title, sentAt: i.sentAt, sentBy: null,
+      total: null, sent: i.sentCount || 0, failed: null, legacy: true,
+    })),
+  ].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+  const series = Object.fromEntries(keys.map(k => [k, { key: k, sent: 0, failed: 0 }]));
+  for (const h of history) {
+    const bucket = series[keyOf(truncate(new Date(h.sentAt), unit))];
+    if (!bucket) continue;
+    bucket.sent += h.sent;
+    bucket.failed += h.failed || 0;
+  }
+
+  const sent = history.reduce((n, h) => n + h.sent, 0);
+  const failed = history.reduce((n, h) => n + (h.failed || 0), 0);
+  const tracked = history.filter(h => !h.legacy);
+  const trackedSent = tracked.reduce((n, h) => n + h.sent, 0);
+  return {
+    sends: history.length,
+    sent,
+    failed,
+    // Success rate only counts sends where failures were recorded.
+    successRate: tracked.length && trackedSent + failed ? Math.round((trackedSent / (trackedSent + failed)) * 1000) / 10 : null,
+    series: Object.values(series),
+    history: history.slice(0, 50),
+    failures,
+  };
+}
+
 // Views and unique visitors per group, largest audience first.
 const audienceBy = (match, id, limit, extra = {}) => PageView.aggregate([
   { $match: match },
@@ -94,11 +177,8 @@ async function viewsBy(match, op, size, first) {
 
 router.get('/', async (req, res) => {
   try {
-    const days = RANGES.includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    const { days, custom, from, to } = resolveRange(req.query);
     const unit = unitFor(days);
-    const to = new Date();
-    // Start at local midnight so "last 7 days" means 7 whole calendar days.
-    const from = new Date(truncate(new Date(to.getTime() - (days - 1) * DAY), 'day').getTime() - OFFSET_MS);
     const prevFrom = new Date(from.getTime() - days * DAY);
     const keys = bucketKeys(from, to, unit);
 
@@ -109,7 +189,7 @@ router.get('/', async (req, res) => {
       views, prevViews, visitorRows, trafficRows, topPages, articleRows, referrers, devices,
       countryRows, regionRows, locatedViews, byHour, byWeekday,
       publishedCount, publishedSeries, submittedCount, pendingNow, reviewRows, byCategory, byAuthor,
-      newSubscribers, subscriberSeries, totalSubscribers, sentRows,
+      newSubscribers, subscriberSeries, totalSubscribers, newsletters,
       bookings, bookingSeries, bookingsByStatus,
     ] = await Promise.all([
       PageView.countDocuments(inRange),
@@ -148,10 +228,7 @@ router.get('/', async (req, res) => {
       Subscriber.countDocuments(inRange),
       countSeries(Subscriber, inRange, 'createdAt', unit, keys),
       Subscriber.countDocuments({ status: 'active' }),
-      NewsletterIssue.aggregate([
-        { $match: { sentAt: between(from, to) } },
-        { $group: { _id: null, issues: { $sum: 1 }, emails: { $sum: '$sentCount' } } },
-      ]),
+      newsletterReport(from, to, unit, keys),
 
       SessionBooking.countDocuments(inRange),
       countSeries(SessionBooking, inRange, 'createdAt', unit, keys),
@@ -167,10 +244,9 @@ router.get('/', async (req, res) => {
 
     const traffic = Object.fromEntries(trafficRows.map(r => [r._id, r]));
     const review = reviewRows[0];
-    const sent = sentRows[0];
 
     res.json({
-      range: { days, unit, from, to, buckets: keys },
+      range: { days, custom, unit, from, to, buckets: keys },
       traffic: {
         views,
         previousViews: prevViews,
@@ -209,16 +285,15 @@ router.get('/', async (req, res) => {
         newSubscribers,
         totalSubscribers,
         subscriberSeries,
-        newslettersSent: sent?.issues || 0,
-        emailsSent: sent?.emails || 0,
         bookings,
         bookingSeries,
         bookingsByStatus,
       },
+      newsletters,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    if (!error.status) console.error(error);
+    res.status(error.status || 500).json({ error: error.message });
   }
 });
 
